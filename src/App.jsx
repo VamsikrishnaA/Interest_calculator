@@ -10,17 +10,29 @@ function App() {
   const [interest, setInterest] = useState(null);
 
   const calculateInterest = () => {
-    const oneDay = 24 * 60 * 60 * 1000;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.round((end - start) / oneDay) + 1;
+  const start = new Date(startDate);
+  const end = new Date(endDate);
 
-    const parsedRate = parseFloat(rate) / 100;
-    const dailyRate = rateType === 'daily' ? parsedRate / 30 : parsedRate;
+  const oneDay = 24 * 60 * 60 * 1000;
+  const days = Math.round((end - start) / oneDay) + 1;
 
-    const result = amount * dailyRate * days;
-    setInterest(result.toFixed(2));
-  };
+  const parsedRate = parseFloat(rate) / 100;
+
+  let result = 0;
+
+  if (rateType === 'monthly') {
+    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+    const isPartialMonth = end.getDate() >= start.getDate() ? 1 : 0;
+    const totalMonths = months + isPartialMonth;
+
+    result = amount * parsedRate * totalMonths;
+  } else {
+    const dailyRate = parsedRate / 30;
+    result = amount * dailyRate * days;
+  }
+
+  setInterest(result.toFixed(2));
+};
 
   return (
     <div className="App">

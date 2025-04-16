@@ -16,7 +16,7 @@ function App() {
     const days = Math.round((end - start) / oneDay) + 1;
 
     const parsedRate = parseFloat(rate) / 100;
-    const dailyRate = rateType === 'monthly' ? parsedRate / 30 : parsedRate;
+    const dailyRate = rateType === 'daily' ? parsedRate / 30 : parsedRate;
 
     const result = amount * dailyRate * days;
     setInterest(result.toFixed(2));

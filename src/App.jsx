@@ -1,56 +1,32 @@
-import { useState } from 'react';
-import './App.css';
+// Gold Loan Interest Calculator with Bethal Logic
 
-function App() {
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [amount, setAmount] = useState('');
-  const [rate, setRate] = useState('');
-  const [rateType, setRateType] = useState('monthly');
-  const [interest, setInterest] = useState(null);
+import React, { useState } from 'react'; import { differenceInDays, parseISO } from 'date-fns';
 
-  const calculateInterest = () => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+export default function InterestCalculator() { const [principal, setPrincipal] = useState(''); const [rate, setRate] = useState(''); const [startDate, setStartDate] = useState(''); const [endDate, setEndDate] = useState(''); const [rateType, setRateType] = useState('monthly'); const [compound, setCompound] = useState('no'); const [result, setResult] = useState(null);
 
-  const oneDay = 24 * 60 * 60 * 1000;
-  const days = Math.round((end - start) / oneDay) + 1;
+const calculateInterest = () => { const p = parseFloat(principal); const r = parseFloat(rate); const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
 
-  const parsedRate = parseFloat(rate) / 100;
+let interest = 0;
 
-  let result = 0;
-
-  if (rateType === 'monthly') {
-    const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-    const isPartialMonth = end.getDate() >= start.getDate() ? 1 : 0;
-    const totalMonths = months + isPartialMonth;
-
-    result = amount * parsedRate * totalMonths;
+if (compound === 'yes') {
+  if (rateType === 'daily') {
+    const dailyRate = r / 30;
+    if (days <= 365) {
+      interest = p * (dailyRate / 100) * days;
+    } else {
+      const interestFirst = p * (dailyRate / 100) * 365;
+      const newPrincipal = p + interestFirst;
+      const remainingDays = days - 365;
+      const interestAfter = newPrincipal * (dailyRate / 100) * remainingDays;
+      interest = interestFirst + interestAfter;
+    }
   } else {
-    const dailyRate = parsedRate / 30;
-    result = amount * dailyRate * days;
-  }
+    const months = Math.floor(days / 30);
+    const extraDays = days % 30;
 
-  setInterest(result.toFixed(2));
-};
+    if (months <= 12) {
+      interest = p * (r / 100) * months;
+    } else {
+      const interestFirst = p * (r / 100) * 12;
+      const
 
-  return (
-    <div className="App">
-      <h2>Gold Loan Interest Calculator</h2>
-      <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-      <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
-      <input type="number" placeholder="Loan Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-      <input type="number" step="0.01" placeholder="Interest Rate (%)" value={rate} onChange={e => setRate(e.target.value)} />
-
-      <select value={rateType} onChange={e => setRateType(e.target.value)}>
-        <option value="monthly">Monthly Rate</option>
-        <option value="daily">Daily Rate</option>
-      </select>
-
-      <button onClick={calculateInterest}>Calculate</button>
-      {interest && <p>Total Interest: ₹{interest}</p>}
-    </div>
-  );
-}
-
-export default App;

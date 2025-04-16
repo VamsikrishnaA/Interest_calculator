@@ -6,6 +6,7 @@ function App() {
   const [endDate, setEndDate] = useState('');
   const [amount, setAmount] = useState('');
   const [rate, setRate] = useState('');
+  const [rateType, setRateType] = useState('monthly');
   const [interest, setInterest] = useState(null);
 
   const calculateInterest = () => {
@@ -13,8 +14,11 @@ function App() {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const days = Math.round((end - start) / oneDay) + 1;
-    const dailyRate = parseFloat(rate) / 100;
-    const result = (amount * dailyRate) * days;
+
+    const parsedRate = parseFloat(rate) / 100;
+    const dailyRate = rateType === 'monthly' ? parsedRate / 30 : parsedRate;
+
+    const result = amount * dailyRate * days;
     setInterest(result.toFixed(2));
   };
 
@@ -24,7 +28,13 @@ function App() {
       <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
       <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
       <input type="number" placeholder="Loan Amount" value={amount} onChange={e => setAmount(e.target.value)} />
-      <input type="number" step="0.01" placeholder="Daily Interest Rate (%)" value={rate} onChange={e => setRate(e.target.value)} />
+      <input type="number" step="0.01" placeholder="Interest Rate (%)" value={rate} onChange={e => setRate(e.target.value)} />
+
+      <select value={rateType} onChange={e => setRateType(e.target.value)}>
+        <option value="monthly">Monthly Rate</option>
+        <option value="daily">Daily Rate</option>
+      </select>
+
       <button onClick={calculateInterest}>Calculate</button>
       {interest && <p>Total Interest: ₹{interest}</p>}
     </div>

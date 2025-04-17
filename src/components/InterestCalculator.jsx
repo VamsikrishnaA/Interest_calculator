@@ -210,8 +210,3 @@ const InterestCalculator = () => {
     </motion.div>
   );
 };
-
-export default InterestCalculator;
-
-Let me know when you want to implement bulk mode, PDF/screenshot export, or delete + compare cards!
-

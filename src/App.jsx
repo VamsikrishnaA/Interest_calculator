@@ -1,110 +1,104 @@
-// Gold Loan Interest Calculator with Bethal Logic (Monthly and Daily)
+import { useState } from "react";
+import "./index.css";
 
-import React, { useState } from 'react'; import { differenceInDays, parseISO } from 'date-fns';
+function App() {
+  const [principal, setPrincipal] = useState("");
+  const [rate, setRate] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [type, setType] = useState("monthly");
+  const [interest, setInterest] = useState(null);
 
-export default function InterestCalculator() { const [principal, setPrincipal] = useState(''); const [rate, setRate] = useState(''); const [startDate, setStartDate] = useState(''); const [endDate, setEndDate] = useState(''); const [rateType, setRateType] = useState('monthly'); const [compound, setCompound] = useState('no'); const [result, setResult] = useState(null);
+  const calculateInterest = () => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
 
-const calculateInterest = () => { const p = parseFloat(principal); const r = parseFloat(rate); const days = differenceInDays(parseISO(endDate), parseISO(startDate)) + 1;
-
-let interest = 0;
-
-if (rateType === 'daily') {
-  const dailyRate = r / 30;
-  if (compound === 'yes') {
-    if (days <= 365) {
-      interest = p * (dailyRate / 100) * days;
-    } else {
-      const interestFirstYear = p * (dailyRate / 100) * 365;
-      const newPrincipal = p + interestFirstYear;
-      const remainingDays = days - 365;
-      const interestAfterYear = newPrincipal * (dailyRate / 100) * remainingDays;
-      interest = interestFirstYear + interestAfterYear;
+    if (isNaN(start) || isNaN(end) || !principal || !rate) {
+      alert("Please fill all the fields correctly.");
+      return;
     }
-  } else {
-    interest = p * (dailyRate / 100) * days;
-  }
-} else {
-  // Monthly logic
-  const months = Math.floor(days / 30);
-  const extraDays = days % 30;
-  let adjustedMonths = months;
 
-  if (extraDays >= 5 && extraDays < 17) {
-    adjustedMonths += 0.5;
-  } else if (extraDays >= 17) {
-    adjustedMonths += 1;
-  } else if (extraDays > 0 && extraDays < 5) {
-    interest += p * (r / 100 / 30) * extraDays;
-  }
-
-  if (compound === 'yes') {
-    if (adjustedMonths <= 12) {
-      interest += p * (r / 100) * adjustedMonths;
-    } else {
-      const interestFirstYear = p * (r / 100) * 12;
-      const newPrincipal = p + interestFirstYear;
-      const remainingMonths = adjustedMonths - 12;
-      const interestAfterYear = newPrincipal * (r / 100) * remainingMonths;
-      interest += interestFirstYear + interestAfterYear;
+    const timeDiff = end - start;
+    if (timeDiff < 0) {
+      alert("End date should be after start date.");
+      return;
     }
-  } else {
-    interest += p * (r / 100) * adjustedMonths;
-  }
-}
 
-setResult(interest.toFixed(2));
+    let calculatedInterest = 0;
 
-};
+    if (type === "monthly") {
+      const months = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
+      calculatedInterest = (principal * rate * months) / 100;
+    } else {
+      const days = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+      const dailyRate = rate / 30;
+      calculatedInterest = (principal * dailyRate * days) / 100;
+    }
 
-return (
-  <div className="min-h-screen flex items-center justify-center bg-gray-100">
-    <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md">
-      <h1 className="text-xl font-bold mb-4 text-center">Interest Calculator</h1>
+    setInterest(calculatedInterest.toFixed(2));
+  };
 
-      <div className="flex flex-col space-y-4">
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+      <div className="bg-white shadow-lg rounded-xl p-6 w-full max-w-md space-y-4">
+        <h1 className="text-2xl font-bold text-center">Gold Loan Interest Calculator</h1>
+
         <input
           type="number"
           placeholder="Principal Amount"
-          className="p-3 border rounded-md"
-        />
-
-        <input
-          type="text"
-          onFocus={(e) => (e.target.type = 'date')}
-          onBlur={(e) => (e.target.type = 'text')}
-          placeholder="Start Date"
-          className="p-3 border rounded-md"
-        />
-
-        <input
-          type="text"
-          onFocus={(e) => (e.target.type = 'date')}
-          onBlur={(e) => (e.target.type = 'text')}
-          placeholder="End Date"
-          className="p-3 border rounded-md"
+          value={principal}
+          onChange={(e) => setPrincipal(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2"
         />
 
         <input
           type="number"
-          placeholder="Interest Rate"
-          className="p-3 border rounded-md"
+          placeholder="Monthly Interest Rate (%)"
+          value={rate}
+          onChange={(e) => setRate(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2"
         />
 
-        <select className="p-3 border rounded-md">
+        <input
+          type="date"
+          placeholder="Start Date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2"
+        />
+
+        <input
+          type="date"
+          placeholder="End Date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2"
+        />
+
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="w-full border border-gray-300 rounded-md p-2"
+        >
           <option value="monthly">Monthly</option>
           <option value="daily">Daily</option>
         </select>
 
-        <select className="p-3 border rounded-md">
-          <option value="no">Simple Interest</option>
-          <option value="yes">Compound Interest</option>
-        </select>
-
-        <button className="bg-blue-600 text-white p-3 rounded-md">
+        <button
+          onClick={calculateInterest}
+          className="w-full bg-yellow-500 text-white font-semibold py-2 rounded-md hover:bg-yellow-600"
+        >
           Calculate
         </button>
+
+        {interest !== null && (
+          <div className="text-center text-xl font-semibold text-green-600">
+            Interest: ₹ {interest}
+          </div>
+        )}
       </div>
     </div>
-  </div>
-); }
+  );
+}
 
+export default App;

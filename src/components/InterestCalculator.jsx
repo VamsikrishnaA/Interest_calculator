@@ -5,15 +5,20 @@ import { motion } from 'framer-motion';
 
 const InterestCalculator = () => {
   const [viewMode, setViewMode] = useState('single');
-  const [principal, setPrincipal] = useState('');
+  const [Principal, setPrincipal] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [interestRate, setInterestRate] = useState('');
+  const [InterestRate, setInterestRate] = useState('');
   const [interestType, setInterestType] = useState('simple');
   const [rateType, setRateType] = useState('monthly');
   const [result, setResult] = useState(null);
 
   const calculateInterest = () => {
+principal = Principal
+const principal = parseFloat(Principal);
+
+const interestRate = parseFloat(InterestRate);
+
     if (!principal || !startDate || !endDate || !interestRate) return;
 
     const days = differenceInDays(new Date(endDate), new Date(startDate));

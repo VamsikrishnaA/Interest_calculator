@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { format, differenceInDays } from 'date-fns';
+import { differenceInDays } from 'date-fns';
 import { CalendarDays, Calculator, Percent, CalendarPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -14,17 +14,14 @@ const InterestCalculator = () => {
   const [result, setResult] = useState(null);
 
   const calculateInterest = () => {
-principal = Principal
-const principal = parseFloat(Principal);
-
-const interestRate = parseFloat(InterestRate);
+    const principal = parseFloat(Principal);
+    const interestRate = parseFloat(InterestRate);
 
     if (isNaN(principal) || !startDate || !endDate || isNaN(interestRate)) return;
 
     const days = differenceInDays(new Date(endDate), new Date(startDate));
     let interest = 0;
-
-    const monthlyRate = parseFloat(interestRate);
+    const monthlyRate = interestRate;
     const dailyRate = monthlyRate / 30;
     let totalAmount = 0;
 
@@ -49,9 +46,8 @@ const interestRate = parseFloat(InterestRate);
         totalAmount = amount + interest;
       }
     } else {
-      const actualRate = dailyRate;
       if (interestType === 'simple') {
-        interest = (principal * actualRate * days) / 100;
+        interest = (principal * dailyRate * days) / 100;
       } else {
         let amount = principal;
         const years = Math.floor(days / 365);
@@ -67,7 +63,7 @@ const interestRate = parseFloat(InterestRate);
 
     setResult({
       interest: parseFloat(interest.toFixed(2)),
-      total: parseFloat((interestType === 'compound' ? totalAmount : parseFloat(principal) + interest).toFixed(2)),
+      total: parseFloat((interestType === 'compound' ? totalAmount : principal + interest).toFixed(2)),
       days
     });
   };
@@ -108,7 +104,7 @@ const interestRate = parseFloat(InterestRate);
               <Calculator className="w-4 h-4 mr-2" />
               <input
                 type="number"
-                value={principal}
+                value={Principal}
                 onChange={(e) => setPrincipal(e.target.value)}
                 className="bg-transparent w-full p-2 outline-none"
               />
@@ -149,7 +145,7 @@ const interestRate = parseFloat(InterestRate);
                 <Percent className="w-4 h-4 mr-2" />
                 <input
                   type="number"
-                  value={interestRate}
+                  value={InterestRate}
                   onChange={(e) => setInterestRate(e.target.value)}
                   className="bg-transparent w-full p-2 outline-none"
                 />
@@ -216,3 +212,6 @@ const interestRate = parseFloat(InterestRate);
 };
 
 export default InterestCalculator;
+
+Let me know when you want to implement bulk mode, PDF/screenshot export, or delete + compare cards!
+

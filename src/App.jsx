@@ -94,6 +94,7 @@ return ( <div className="p-4 max-w-md mx-auto space-y-4"> <h1 className="text-xl
 
   <input
     type="date"
+    placeholder="startDate"
     value={startDate}
     onChange={(e) => setStartDate(e.target.value)}
     className="w-full p-2 border rounded"
@@ -101,6 +102,7 @@ return ( <div className="p-4 max-w-md mx-auto space-y-4"> <h1 className="text-xl
 
   <input
     type="date"
+    placeholder="endDate"
     value={endDate}
     onChange={(e) => setEndDate(e.target.value)}
     className="w-full p-2 border rounded"

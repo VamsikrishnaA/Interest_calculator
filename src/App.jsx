@@ -1,6 +1,17 @@
-import React, { useState } from "react"; import dayjs from "dayjs"; import "./App.css";
+import React, { useState } from "react";
+import dayjs from "dayjs";
+import "./App.css";
 
-function App() { const [principal, setPrincipal] = useState(0); const [rate, setRate] = useState(0); const [startDate, setStartDate] = useState(""); const [endDate, setEndDate] = useState(""); const [interest, setInterest] = useState(0); const [totalAmount, setTotalAmount] = useState(0); const [duration, setDuration] = useState(""); const [mode, setMode] = useState("daily"); const [isCompound, setIsCompound] = useState(false);
+function App() {
+  const [principal, setPrincipal] = useState(0);
+  const [rate, setRate] = useState(0);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [interest, setInterest] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
+  const [duration, setDuration] = useState("");
+  const [mode, setMode] = useState("daily");
+  const [isCompound, setIsCompound] = useState(false);
 
 const handleCalculate = () => { if (!startDate || !endDate || principal <= 0 || rate <= 0) return;
 

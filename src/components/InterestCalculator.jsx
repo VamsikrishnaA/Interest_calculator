@@ -1,101 +1,213 @@
 import React, { useState } from 'react';
-import dayjs from 'dayjs';
-import { saveAs } from 'file-saver';
-import html2canvas from 'html2canvas';
+import { format, differenceInDays } from 'date-fns';
+import { CalendarDays, Calculator, Percent, CalendarPlus } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-export default function InterestCalculator() {
+const InterestCalculator = () => {
+  const [viewMode, setViewMode] = useState('single');
   const [principal, setPrincipal] = useState('');
-  const [rate, setRate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [interestRate, setInterestRate] = useState('');
+  const [interestType, setInterestType] = useState('simple');
+  const [rateType, setRateType] = useState('monthly');
   const [result, setResult] = useState(null);
 
   const calculateInterest = () => {
-    const start = dayjs(startDate);
-    const end = dayjs(endDate);
-    const totalDays = end.diff(start, 'day');
-    const monthlyRate = parseFloat(rate);
+    if (!principal || !startDate || !endDate || !interestRate) return;
 
+    const days = differenceInDays(new Date(endDate), new Date(startDate));
     let interest = 0;
-    let months = Math.floor(totalDays / 30);
-    let remainingDays = totalDays % 30;
 
-    if (remainingDays >= 16) months += 1;
-    else if (remainingDays >= 6) months += 0.5;
+    const monthlyRate = parseFloat(interestRate);
+    const dailyRate = monthlyRate / 30;
+    let totalAmount = 0;
 
-    interest = principal * (monthlyRate / 100) * months;
-    const total = parseFloat(principal) + interest;
+    if (rateType === 'monthly') {
+      let months = Math.floor(days / 30);
+      const remDays = days % 30;
 
-    setResult({ interest, total, months, totalDays });
-  };
+      if (remDays >= 16) months += 1;
+      else if (remDays >= 6) months += 0.5;
 
-  const exportResult = async () => {
-    const element = document.getElementById('result');
-    const canvas = await html2canvas(element);
-    canvas.toBlob(blob => {
-      saveAs(blob, 'interest-result.png');
+      if (interestType === 'simple') {
+        interest = (principal * monthlyRate * months) / 100;
+      } else {
+        let amount = principal;
+        const years = Math.floor(days / 365);
+        const rem = days % 365;
+        for (let i = 0; i < years; i++) {
+          const compoundInterest = (amount * monthlyRate * 12) / 100;
+          amount += compoundInterest;
+        }
+        interest = (amount * monthlyRate * Math.floor(rem / 30)) / 100;
+        totalAmount = amount + interest;
+      }
+    } else {
+      const actualRate = dailyRate;
+      if (interestType === 'simple') {
+        interest = (principal * actualRate * days) / 100;
+      } else {
+        let amount = principal;
+        const years = Math.floor(days / 365);
+        const remDays = days % 365;
+        for (let i = 0; i < years; i++) {
+          const compoundInterest = (amount * dailyRate * 365) / 100;
+          amount += compoundInterest;
+        }
+        interest = (amount * dailyRate * remDays) / 100;
+        totalAmount = amount + interest;
+      }
+    }
+
+    setResult({
+      interest: parseFloat(interest.toFixed(2)),
+      total: parseFloat((interestType === 'compound' ? totalAmount : parseFloat(principal) + interest).toFixed(2)),
+      days
     });
   };
 
   return (
-    <div className="max-w-xl mx-auto space-y-4">
-      <input
-        type="number"
-        placeholder="Principal Amount"
-        className="w-full p-2 rounded bg-gray-800 text-white"
-        value={principal}
-        onChange={e => setPrincipal(e.target.value)}
-      />
-      <input
-        type="number"
-        placeholder="Monthly Interest Rate (%)"
-        className="w-full p-2 rounded bg-gray-800 text-white"
-        value={rate}
-        onChange={e => setRate(e.target.value)}
-      />
-      <div className="flex justify-between gap-4">
-        <div className="flex-1">
-          <label className="block mb-1">Start Date</label>
-          <input
-            type="date"
-            className="w-full p-2 rounded bg-gray-800 text-white"
-            value={startDate}
-            onChange={e => setStartDate(e.target.value)}
-          />
-        </div>
-        <div className="flex-1">
-          <label className="block mb-1">End Date</label>
-          <input
-            type="date"
-            className="w-full p-2 rounded bg-gray-800 text-white"
-            value={endDate}
-            onChange={e => setEndDate(e.target.value)}
-          />
-        </div>
-      </div>
-      <button
-        onClick={calculateInterest}
-        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded"
-      >
-        Calculate
-      </button>
+    <motion.div
+      className="p-4 rounded-2xl shadow-md bg-zinc-900 text-white max-w-md mx-auto space-y-6"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      <h1 className="text-3xl font-bold text-center">Interest Calculator</h1>
 
-      {result && (
-        <div
-          id="result"
-          className="bg-gray-800 p-4 rounded shadow-lg space-y-2 mt-4"
-        >
-          <p>Interest: ₹{result.interest.toFixed(2)}</p>
-          <p>Total Amount: ₹{result.total.toFixed(2)}</p>
-          <p>Duration: {result.months} months ({result.totalDays} days)</p>
+      {/* Mode Toggle */}
+      <div className="flex justify-center gap-4 bg-zinc-800 rounded-full p-1">
+        {['single', 'bulk'].map((mode) => (
           <button
-            onClick={exportResult}
-            className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white"
+            key={mode}
+            className={`px-4 py-1 rounded-full text-sm font-medium ${
+              viewMode === mode ? 'bg-white text-black' : 'text-white'
+            }`}
+            onClick={() => setViewMode(mode)}
           >
-            Export Result
+            {mode.charAt(0).toUpperCase() + mode.slice(1)}
           </button>
-        </div>
+        ))}
+      </div>
+
+      {viewMode === 'single' && (
+        <motion.div
+          className="space-y-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          {/* Input Fields */}
+          <div className="space-y-2">
+            <label className="block text-sm">Principal Amount</label>
+            <div className="flex items-center bg-zinc-800 px-3 rounded-md">
+              <Calculator className="w-4 h-4 mr-2" />
+              <input
+                type="number"
+                value={principal}
+                onChange={(e) => setPrincipal(e.target.value)}
+                className="bg-transparent w-full p-2 outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="w-1/2">
+              <label className="block text-sm">Start Date</label>
+              <div className="flex items-center bg-zinc-800 px-3 rounded-md">
+                <CalendarDays className="w-4 h-4 mr-2" />
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-transparent w-full p-2 outline-none"
+                />
+              </div>
+            </div>
+            <div className="w-1/2">
+              <label className="block text-sm">End Date</label>
+              <div className="flex items-center bg-zinc-800 px-3 rounded-md">
+                <CalendarPlus className="w-4 h-4 mr-2" />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-transparent w-full p-2 outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="w-1/2">
+              <label className="block text-sm">Interest Rate</label>
+              <div className="flex items-center bg-zinc-800 px-3 rounded-md">
+                <Percent className="w-4 h-4 mr-2" />
+                <input
+                  type="number"
+                  value={interestRate}
+                  onChange={(e) => setInterestRate(e.target.value)}
+                  className="bg-transparent w-full p-2 outline-none"
+                />
+              </div>
+            </div>
+            <div className="w-1/2">
+              <label className="block text-sm">Rate Type</label>
+              <select
+                value={rateType}
+                onChange={(e) => setRateType(e.target.value)}
+                className="w-full bg-zinc-800 text-white p-2 rounded-md"
+              >
+                <option value="monthly">Monthly</option>
+                <option value="daily">Daily</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Interest Type Toggle */}
+          <div className="flex justify-center gap-6 items-center mt-2">
+            {['simple', 'compound'].map((type) => (
+              <button
+                key={type}
+                className={`flex items-center gap-1 px-4 py-1 rounded-full text-sm ${
+                  interestType === type ? 'bg-white text-black' : 'bg-zinc-800 text-white'
+                }`}
+                onClick={() => setInterestType(type)}
+              >
+                {type.charAt(0).toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Calculate Button */}
+          <button
+            onClick={calculateInterest}
+            className="w-full bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-md font-semibold transition"
+          >
+            Calculate
+          </button>
+
+          {/* Results */}
+          {result && (
+            <motion.div
+              className="bg-zinc-800 rounded-xl p-4 text-center space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <div className="flex justify-between text-lg">
+                <span>Interest</span>
+                <span className="font-bold">{result.interest}</span>
+              </div>
+              <div className="flex justify-between text-lg">
+                <span>Total Amount</span>
+                <span className="font-bold">{result.total}</span>
+              </div>
+              <div className="text-sm text-zinc-400">{result.days} Days</div>
+            </motion.div>
+          )}
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
-}
+};
+
+export default InterestCalculator;

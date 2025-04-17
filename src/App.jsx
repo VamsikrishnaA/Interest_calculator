@@ -58,13 +58,7 @@ setResult(interest.toFixed(2));
 
 return ( <div className="p-4 max-w-md mx-auto space-y-4"> <h1 className="text-xl font-bold">Interest Generator</h1>
 
-<input
-    type="number"
-    placeholder="Principal Amount"
-    value={principal}
-    onChange={(e) => setPrincipal(e.target.value)}
-    className="w-full p-2 border rounded"
-  />
+
 
   <input
     type="number"

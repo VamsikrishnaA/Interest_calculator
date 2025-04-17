@@ -1,186 +1,137 @@
 import React, { useState } from "react"; import dayjs from "dayjs"; import "./App.css";
 
-function App() { const [principal, setPrincipal] = useState(0); const [rate, setRate] = useState(0); const [startDate, setStartDate] = useState(""); const [endDate, setEndDate] = useState(""); const [isCompound, setIsCompound] = useState(false); const [mode, setMode] = useState("daily"); const [result, setResult] = useState(null);
+function App() { const [principal, setPrincipal] = useState(0); const [rate, setRate] = useState(0); const [startDate, setStartDate] = useState(""); const [endDate, setEndDate] = useState(""); const [interest, setInterest] = useState(0); const [totalAmount, setTotalAmount] = useState(0); const [duration, setDuration] = useState(""); const [mode, setMode] = useState("daily"); const [isCompound, setIsCompound] = useState(false);
 
-const calculateInterest = () => { if (!startDate || !endDate) return;
+const handleCalculate = () => { if (!startDate || !endDate || principal <= 0 || rate <= 0) return;
 
 const start = dayjs(startDate);
 const end = dayjs(endDate);
+const days = end.diff(start, "day");
+
+let calculatedInterest = 0;
 let total = 0;
-let interest = 0;
-const timeDiff = end.diff(start, mode === "daily" ? "day" : "month", true);
+let months = 0;
 
-if (isCompound) {
-  if (mode === "daily") {
-    let days = Math.floor(timeDiff);
-    let currentPrincipal = principal;
-    const dailyRate = rate / 30 / 100;
+if (mode === "daily") {
+  const dailyRate = rate / 30;
 
-    if (days >= 365) {
-      const interest1 = currentPrincipal * dailyRate * 365;
-      currentPrincipal += interest1;
-      const remainingDays = days - 365;
-      const interest2 = currentPrincipal * dailyRate * remainingDays;
-      interest = interest1 + interest2;
+  if (isCompound) {
+    let tempPrincipal = principal;
+    let interestAccrued = 0;
+    if (days > 365) {
+      const firstYearInterest = (tempPrincipal * dailyRate * 365) / 100;
+      interestAccrued += firstYearInterest;
+      tempPrincipal += firstYearInterest;
+      const remainingInterest = (tempPrincipal * dailyRate * (days - 365)) / 100;
+      interestAccrued += remainingInterest;
     } else {
-      interest = currentPrincipal * dailyRate * days;
+      interestAccrued = (tempPrincipal * dailyRate * days) / 100;
     }
-    total = principal + interest;
-    setResult({ total, time: `${days} Days`, interest });
-
+    calculatedInterest = interestAccrued;
+    total = principal + interestAccrued;
   } else {
-    const start = dayjs(startDate);
-    const end = dayjs(endDate);
-    const totalMonths = end.diff(start, 'month');
-    const remainingDays = end.diff(start.add(totalMonths, 'month'), 'day');
-
-    let monthsCount = totalMonths;
-    if (remainingDays > 16) monthsCount += 1;
-    else if (remainingDays >= 6) monthsCount += 0.5;
-
-    const monthlyRate = rate / 100;
-    let currentPrincipal = principal;
-    let tempInterest = 0;
-
-    if (monthsCount >= 12) {
-      const interest1 = currentPrincipal * monthlyRate * 12;
-      currentPrincipal += interest1;
-      const interest2 = currentPrincipal * monthlyRate * (monthsCount - 12);
-      tempInterest = interest1 + interest2;
-    } else {
-      tempInterest = currentPrincipal * monthlyRate * monthsCount;
-    }
-
-    // Add interest for <6 days
-    if (remainingDays < 6 && remainingDays > 0) {
-      const dailyRate = rate / 30 / 100;
-      tempInterest += currentPrincipal * dailyRate * remainingDays;
-    }
-
-    interest = tempInterest;
-    total = principal + interest;
-    setResult({ total, time: `${monthsCount} Months`, interest });
+    calculatedInterest = (principal * dailyRate * days) / 100;
+    total = principal + calculatedInterest;
   }
+
+  setDuration(`${days} Days`);
 } else {
-  if (mode === "daily") {
-    const days = Math.floor(timeDiff);
-    const dailyRate = rate / 30 / 100;
-    interest = principal * dailyRate * days;
-    total = principal + interest;
-    setResult({ total, time: `${days} Days`, interest });
-  } else {
-    const totalMonths = end.diff(start, 'month');
-    const remainingDays = end.diff(start.add(totalMonths, 'month'), 'day');
+  const totalDays = end.diff(start, "day");
+  const fullMonths = Math.floor(totalDays / 30);
+  const remainingDays = totalDays % 30;
 
-    let monthsCount = totalMonths;
-    if (remainingDays > 16) monthsCount += 1;
-    else if (remainingDays >= 6) monthsCount += 0.5;
+  if (remainingDays >= 6 && remainingDays <= 16) {
+    months = fullMonths + 0.5;
+  } else if (remainingDays > 16) {
+    months = fullMonths + 1;
+  } else if (remainingDays < 6) {
+    months = fullMonths;
+    const simpleInterest = (principal * rate * remainingDays) / (30 * 100);
+    calculatedInterest = (principal * rate * months) / 100 + simpleInterest;
+    total = principal + calculatedInterest;
+    setInterest(calculatedInterest.toFixed(2));
+    setTotalAmount(total.toFixed(2));
+    setDuration(`${months} Months ${remainingDays} Days`);
+    return;
+  }
 
-    const monthlyRate = rate / 100;
-    interest = principal * monthlyRate * monthsCount;
+  if (isCompound) {
+    let tempPrincipal = principal;
+    let interestAccrued = 0;
 
-    // Add interest for <6 days
-    if (remainingDays < 6 && remainingDays > 0) {
-      const dailyRate = rate / 30 / 100;
-      interest += principal * dailyRate * remainingDays;
+    if (months > 12) {
+      const firstYearInterest = (tempPrincipal * rate * 12) / 100;
+      interestAccrued += firstYearInterest;
+      tempPrincipal += firstYearInterest;
+      const remainingInterest = (tempPrincipal * rate * (months - 12)) / 100;
+      interestAccrued += remainingInterest;
+    } else {
+      interestAccrued = (tempPrincipal * rate * months) / 100;
     }
 
-    total = principal + interest;
-    setResult({ total, time: `${monthsCount} Months`, interest });
+    calculatedInterest = interestAccrued;
+    total = principal + calculatedInterest;
+  } else {
+    calculatedInterest = (principal * rate * months) / 100;
+    total = principal + calculatedInterest;
   }
+
+  setDuration(`${months} Months`);
 }
+
+setInterest(calculatedInterest.toFixed(2));
+setTotalAmount(total.toFixed(2));
 
 };
 
-return ( <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 p-4"> <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-xl space-y-4"> <h1 className="text-2xl font-bold text-blue-600 text-center">Gold Loan Interest Calculator</h1>
+const clearZero = (e, setter) => { if (e.target.value === "0") { e.target.value = ""; } };
 
-<div className="space-y-2">
-      <label className="block text-sm font-medium">Principal Amount</label>
-      <input
-        type="number"
-        placeholder="Enter principal"
-        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
-        value={principal}
-        onChange={(e) => setPrincipal(parseFloat(e.target.value))}
-      />
-    </div>
+const resetIfEmpty = (e, setter) => { if (e.target.value === "") { setter(0); e.target.value = "0"; } };
 
-    <div className="space-y-2">
-      <label className="block text-sm font-medium">Interest Rate (Monthly %)</label>
-      <input
-        type="number"
-        placeholder="Enter monthly interest rate"
-        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
-        value={rate}
-        onChange={(e) => setRate(parseFloat(e.target.value))}
-      />
-    </div>
+return ( <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-300 p-6 text-gray-900"> <h1 className="text-3xl font-bold text-center mb-6">Gold Loan Interest Calculator</h1> <div className="max-w-md mx-auto space-y-4 bg-white p-6 rounded-2xl shadow-xl"> <input type="number" value={principal} onChange={(e) => setPrincipal(Number(e.target.value))} onFocus={(e) => clearZero(e, setPrincipal)} onBlur={(e) => resetIfEmpty(e, setPrincipal)} placeholder="Enter Principal" className="w-full p-2 border rounded text-black" /> <input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} onFocus={(e) => clearZero(e, setRate)} onBlur={(e) => resetIfEmpty(e, setRate)} placeholder="Monthly Interest Rate %" className="w-full p-2 border rounded text-black" /> <label className="block text-sm font-medium">Start Date</label> <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} placeholder="Start Date" className="w-full p-2 border rounded text-black" /> <label className="block text-sm font-medium">End Date</label> <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} placeholder="End Date" className="w-full p-2 border rounded text-black" />
 
-    <div className="space-y-2">
-      <label className="block text-sm font-medium">Start Date</label>
-      <input
-        type="date"
-        placeholder="Select start date"
-        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
-        value={startDate}
-        onChange={(e) => setStartDate(e.target.value)}
-      />
-    </div>
-
-    <div className="space-y-2">
-      <label className="block text-sm font-medium">End Date</label>
-      <input
-        type="date"
-        placeholder="Select end date"
-        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
-        value={endDate}
-        onChange={(e) => setEndDate(e.target.value)}
-      />
-    </div>
-
-    <div className="flex justify-between items-center">
-      <span className="text-sm">Simple</span>
-      <label className="relative inline-flex items-center cursor-pointer">
+<div className="flex justify-between">
+      <label>
         <input
-          type="checkbox"
-          className="sr-only peer"
-          checked={isCompound}
-          onChange={(e) => setIsCompound(e.target.checked)}
+          type="radio"
+          value="daily"
+          checked={mode === "daily"}
+          onChange={() => setMode("daily")}
         />
-        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        Daily
       </label>
-      <span className="text-sm">Compound</span>
+      <label>
+        <input
+          type="radio"
+          value="monthly"
+          checked={mode === "monthly"}
+          onChange={() => setMode("monthly")}
+        />
+        Monthly
+      </label>
     </div>
 
-    <div className="flex gap-4">
-      <button
-        onClick={() => setMode("daily")}
-        className={`flex-1 px-4 py-2 rounded-xl ${mode === "daily" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
-      >
-        Daily
-      </button>
-      <button
-        onClick={() => setMode("monthly")}
-        className={`flex-1 px-4 py-2 rounded-xl ${mode === "monthly" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
-      >
-        Monthly
-      </button>
-    </div>
+    <label className="flex items-center space-x-2">
+      <input
+        type="checkbox"
+        checked={isCompound}
+        onChange={() => setIsCompound(!isCompound)}
+      />
+      <span>Compound Interest</span>
+    </label>
 
     <button
-      onClick={calculateInterest}
-      className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium px-4 py-2 rounded-xl shadow hover:scale-105 transition"
+      onClick={handleCalculate}
+      className="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700"
     >
       Calculate
     </button>
 
-    {result && (
-      <div className="mt-4 bg-gray-50 p-4 rounded-xl shadow-md">
-        <p className="text-lg font-bold text-green-600">Total Amount: ₹{result.total.toFixed(2)}</p>
-        <p className="text-sm text-gray-600">Duration: {result.time}</p>
-        <p className="text-sm text-gray-600">Interest: ₹{result.interest.toFixed(2)}</p>
-      </div>
-    )}
+    <div className="text-center">
+      <p>Interest: ₹{interest}</p>
+      <p>Total Amount: ₹{totalAmount}</p>
+      <p>Duration: {duration}</p>
+    </div>
   </div>
 </div>
 

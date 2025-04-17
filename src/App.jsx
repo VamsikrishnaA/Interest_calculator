@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import dayjs from "dayjs";
 
 function App() {
   const [principal, setPrincipal] = useState("");
@@ -6,173 +7,182 @@ function App() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [type, setType] = useState("daily");
-  const [mode, setMode] = useState("simple");
-  const [result, setResult] = useState("");
-
-  const calculateMonths = (start, end) => {
-    const startObj = new Date(start);
-    const endObj = new Date(end);
-
-    let totalMonths =
-      (endObj.getFullYear() - startObj.getFullYear()) * 12 +
-      (endObj.getMonth() - startObj.getMonth());
-
-    const extraDays = endObj.getDate() - startObj.getDate();
-
-    if (extraDays >= 6 && extraDays <= 16) {
-      totalMonths += 0.5;
-    } else if (extraDays > 16) {
-      totalMonths += 1;
-    } else if (extraDays > 0) {
-      totalMonths += extraDays / 30;
-    }
-
-    return totalMonths;
-  };
-
-  const calculateDays = (start, end) => {
-    const startObj = new Date(start);
-    const endObj = new Date(end);
-    const diffTime = Math.abs(endObj - startObj);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
+  const [compound, setCompound] = useState(false);
+  const [result, setResult] = useState(null);
 
   const handleCalculate = () => {
-    const P = parseFloat(principal);
-    const R = parseFloat(rate);
-    const start = startDate;
-    const end = endDate;
+    if (!principal || !rate || !startDate || !endDate) return;
 
-    if (!P || !R || !start || !end) {
-      setResult("Please fill all fields.");
-      return;
-    }
-
-    let interest = 0;
-    let total = 0;
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const diffInDays = end.diff(start, "day");
 
     if (type === "daily") {
-      const days = calculateDays(start, end);
-      const dailyRate = R / 30 / 100;
-
-      if (mode === "compound") {
-        let currentPrincipal = P;
-        if (days > 365) {
-          const interestFirstYear = currentPrincipal * dailyRate * 365;
-          currentPrincipal += interestFirstYear;
-          const remainingDays = days - 365;
-          interest = interestFirstYear + currentPrincipal * dailyRate * remainingDays;
+      const dailyRate = rate / 30;
+      if (compound) {
+        let interest = 0;
+        let tempPrincipal = parseFloat(principal);
+        if (diffInDays > 365) {
+          const fullYears = Math.floor(diffInDays / 365);
+          const remainingDays = diffInDays % 365;
+          for (let i = 0; i < fullYears; i++) {
+            interest += (tempPrincipal * dailyRate * 365) / 100;
+            tempPrincipal += (tempPrincipal * dailyRate * 365) / 100;
+          }
+          interest += (tempPrincipal * dailyRate * remainingDays) / 100;
+          setResult({
+            interest: interest.toFixed(2),
+            total: (parseFloat(principal) + interest).toFixed(2),
+            duration: `${diffInDays} days`,
+          });
         } else {
-          interest = currentPrincipal * dailyRate * days;
+          interest = (tempPrincipal * dailyRate * diffInDays) / 100;
+          setResult({
+            interest: interest.toFixed(2),
+            total: (tempPrincipal + interest).toFixed(2),
+            duration: `${diffInDays} days`,
+          });
         }
-        total = P + interest;
-        setResult(
-          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Days: ${days}`
-        );
       } else {
-        interest = P * dailyRate * days;
-        total = P + interest;
-        setResult(
-          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Days: ${days}`
-        );
+        const interest = (principal * dailyRate * diffInDays) / 100;
+        setResult({
+          interest: interest.toFixed(2),
+          total: (parseFloat(principal) + interest).toFixed(2),
+          duration: `${diffInDays} days`,
+        });
       }
-    } else if (type === "monthly") {
-      const months = calculateMonths(start, end);
-      const monthlyRate = R / 100;
+    }
 
-      if (mode === "compound") {
-        let currentPrincipal = P;
-        if (months > 12) {
-          const interestFirstYear = currentPrincipal * monthlyRate * 12;
-          currentPrincipal += interestFirstYear;
-          const remainingMonths = months - 12;
-          interest = interestFirstYear + currentPrincipal * monthlyRate * remainingMonths;
-        } else {
-          interest = currentPrincipal * monthlyRate * months;
+    if (type === "monthly") {
+      let months = end.diff(start, "month");
+      const daysRemainder = end.diff(start.add(months, "month"), "day");
+
+      if (daysRemainder >= 6 && daysRemainder <= 16) {
+        months += 0.5;
+      } else if (daysRemainder > 16) {
+        months += 1;
+      }
+
+      if (compound) {
+        let interest = 0;
+        let tempPrincipal = parseFloat(principal);
+        const years = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+        for (let i = 0; i < years; i++) {
+          interest += (tempPrincipal * rate * 12) / 100;
+          tempPrincipal += (tempPrincipal * rate * 12) / 100;
         }
-        total = P + interest;
-        setResult(
-          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Months: ${months}`
-        );
+        interest += (tempPrincipal * rate * remainingMonths) / 100;
+        setResult({
+          interest: interest.toFixed(2),
+          total: (parseFloat(principal) + interest).toFixed(2),
+          duration: `${months} months`,
+        });
       } else {
-        interest = P * monthlyRate * months;
-        total = P + interest;
-        setResult(
-          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Months: ${months}`
-        );
+        const interest = (principal * rate * months) / 100;
+        setResult({
+          interest: interest.toFixed(2),
+          total: (parseFloat(principal) + interest).toFixed(2),
+          duration: `${months} months`,
+        });
       }
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-100">
-      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-4">Gold Loan Interest Calculator</h1>
-        
-        <input
-          type="number"
-          placeholder="Principal Amount (₹)"
-          className="w-full p-2 border rounded mb-3"
-          value={principal}
-          onChange={(e) => setPrincipal(e.target.value)}
-        />
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center px-4">
+      <div className="max-w-md w-full bg-gray-800 rounded-2xl shadow-2xl p-6 space-y-6">
+        <h1 className="text-2xl font-bold text-center">Gold Loan Interest Calculator</h1>
 
-        <input
-          type="number"
-          placeholder="Monthly Interest Rate (%)"
-          className="w-full p-2 border rounded mb-3"
-          value={rate}
-          onChange={(e) => setRate(e.target.value)}
-        />
+        <div className="space-y-4">
+          <div>
+            <label className="block mb-1">Principal Amount</label>
+            <input
+              type="number"
+              value={principal}
+              onChange={(e) => setPrincipal(e.target.value)}
+              placeholder="Enter principal"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
 
-        <label className="block text-sm mb-1">Start Date</label>
-        <input
-          type="date"
-          className="w-full p-2 border rounded mb-3"
-          placeholder="Start Date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
+          <div>
+            <label className="block mb-1">Interest Rate (%)</label>
+            <input
+              type="number"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              placeholder="Monthly rate (e.g. 2)"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
 
-        <label className="block text-sm mb-1">End Date</label>
-        <input
-          type="date"
-          className="w-full p-2 border rounded mb-3"
-          placeholder="End Date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-        />
+          <div>
+            <label className="block mb-1">Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              placeholder="Select start date"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
 
-        <div className="flex justify-between mb-3">
-          <select
-            className="w-1/2 p-2 border rounded mr-2"
-            value={type}
-            onChange={(e) => setType(e.target.value)}
+          <div>
+            <label className="block mb-1">End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              placeholder="Select end date"
+              className="w-full p-2 rounded bg-gray-700 text-white"
+            />
+          </div>
+
+          <div className="flex justify-between">
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="type"
+                value="daily"
+                checked={type === "daily"}
+                onChange={() => setType("daily")}
+              />
+              Daily
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="radio"
+                name="type"
+                value="monthly"
+                checked={type === "monthly"}
+                onChange={() => setType("monthly")}
+              />
+              Monthly
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={compound}
+                onChange={() => setCompound(!compound)}
+              />
+              Compound
+            </label>
+          </div>
+
+          <button
+            onClick={handleCalculate}
+            className="w-full bg-yellow-500 text-black font-semibold p-2 rounded hover:bg-yellow-400"
           >
-            <option value="daily">Daily</option>
-            <option value="monthly">Monthly</option>
-          </select>
-
-          <select
-            className="w-1/2 p-2 border rounded ml-2"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-          >
-            <option value="simple">Simple</option>
-            <option value="compound">Compound</option>
-          </select>
+            Calculate
+          </button>
         </div>
 
-        <button
-          onClick={handleCalculate}
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
-        >
-          Calculate
-        </button>
-
         {result && (
-          <div className="mt-4 whitespace-pre-line bg-gray-50 p-4 rounded shadow text-gray-700">
-            {result}
+          <div className="bg-gray-900 rounded-lg p-4 mt-4 space-y-2">
+            <div><strong>Interest:</strong> ₹{result.interest}</div>
+            <div><strong>Total Amount:</strong> ₹{result.total}</div>
+            <div><strong>Duration:</strong> {result.duration}</div>
           </div>
         )}
       </div>

@@ -25,7 +25,6 @@ function App() {
     const months = Math.ceil(days / 30);
 
     if (compoundType === "compound") {
-      // Custom compound logic
       if (interestType === "daily") {
         let dailyRate = r / 30;
         let totalPrincipal = p;
@@ -55,7 +54,6 @@ function App() {
         }
       }
     } else {
-      // Simple interest logic
       if (interestType === "daily") {
         const dailyRate = r / 30;
         result = (p * dailyRate * days) / 100;
@@ -88,23 +86,23 @@ function App() {
           className="w-full mb-3 px-4 py-2 border rounded-lg"
         />
 
+        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
         <input
           type="date"
-          placeholder="Start Date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           className="w-full mb-3 px-4 py-2 border rounded-lg"
         />
 
+        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
         <input
           type="date"
-          placeholder="End Date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
           className="w-full mb-4 px-4 py-2 border rounded-lg"
         />
 
-        {/* Simple vs Compound Toggle */}
+        {/* Compound Type Toggle */}
         <div className="flex justify-center mb-3">
           <button
             className={`px-4 py-2 rounded-l ${compoundType === "simple" ? "bg-blue-600 text-white" : "bg-gray-200"}`}

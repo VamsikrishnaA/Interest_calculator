@@ -1,193 +1,189 @@
-import { useState } from "react";
-import dayjs from "dayjs";
+import React, { useState } from "react"; import dayjs from "dayjs"; import "./App.css";
 
-function App() {
-  const [principal, setPrincipal] = useState("");
-  const [rate, setRate] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [type, setType] = useState("daily");
-  const [compound, setCompound] = useState(false);
-  const [result, setResult] = useState(null);
+function App() { const [principal, setPrincipal] = useState(0); const [rate, setRate] = useState(0); const [startDate, setStartDate] = useState(""); const [endDate, setEndDate] = useState(""); const [isCompound, setIsCompound] = useState(false); const [mode, setMode] = useState("daily"); const [result, setResult] = useState(null);
 
-  const handleCalculate = () => {
-    if (!principal || !rate || !startDate || !endDate) return;
+const calculateInterest = () => { if (!startDate || !endDate) return;
 
+const start = dayjs(startDate);
+const end = dayjs(endDate);
+let total = 0;
+let interest = 0;
+const timeDiff = end.diff(start, mode === "daily" ? "day" : "month", true);
+
+if (isCompound) {
+  if (mode === "daily") {
+    let days = Math.floor(timeDiff);
+    let currentPrincipal = principal;
+    const dailyRate = rate / 30 / 100;
+
+    if (days >= 365) {
+      const interest1 = currentPrincipal * dailyRate * 365;
+      currentPrincipal += interest1;
+      const remainingDays = days - 365;
+      const interest2 = currentPrincipal * dailyRate * remainingDays;
+      interest = interest1 + interest2;
+    } else {
+      interest = currentPrincipal * dailyRate * days;
+    }
+    total = principal + interest;
+    setResult({ total, time: `${days} Days`, interest });
+
+  } else {
     const start = dayjs(startDate);
     const end = dayjs(endDate);
-    const diffInDays = end.diff(start, "day");
+    const totalMonths = end.diff(start, 'month');
+    const remainingDays = end.diff(start.add(totalMonths, 'month'), 'day');
 
-    if (type === "daily") {
-      const dailyRate = rate / 30;
-      if (compound) {
-        let interest = 0;
-        let tempPrincipal = parseFloat(principal);
-        if (diffInDays > 365) {
-          const fullYears = Math.floor(diffInDays / 365);
-          const remainingDays = diffInDays % 365;
-          for (let i = 0; i < fullYears; i++) {
-            interest += (tempPrincipal * dailyRate * 365) / 100;
-            tempPrincipal += (tempPrincipal * dailyRate * 365) / 100;
-          }
-          interest += (tempPrincipal * dailyRate * remainingDays) / 100;
-          setResult({
-            interest: interest.toFixed(2),
-            total: (parseFloat(principal) + interest).toFixed(2),
-            duration: `${diffInDays} days`,
-          });
-        } else {
-          interest = (tempPrincipal * dailyRate * diffInDays) / 100;
-          setResult({
-            interest: interest.toFixed(2),
-            total: (tempPrincipal + interest).toFixed(2),
-            duration: `${diffInDays} days`,
-          });
-        }
-      } else {
-        const interest = (principal * dailyRate * diffInDays) / 100;
-        setResult({
-          interest: interest.toFixed(2),
-          total: (parseFloat(principal) + interest).toFixed(2),
-          duration: `${diffInDays} days`,
-        });
-      }
+    let monthsCount = totalMonths;
+    if (remainingDays > 16) monthsCount += 1;
+    else if (remainingDays >= 6) monthsCount += 0.5;
+
+    const monthlyRate = rate / 100;
+    let currentPrincipal = principal;
+    let tempInterest = 0;
+
+    if (monthsCount >= 12) {
+      const interest1 = currentPrincipal * monthlyRate * 12;
+      currentPrincipal += interest1;
+      const interest2 = currentPrincipal * monthlyRate * (monthsCount - 12);
+      tempInterest = interest1 + interest2;
+    } else {
+      tempInterest = currentPrincipal * monthlyRate * monthsCount;
     }
 
-    if (type === "monthly") {
-      let months = end.diff(start, "month");
-      const daysRemainder = end.diff(start.add(months, "month"), "day");
-
-      if (daysRemainder >= 6 && daysRemainder <= 16) {
-        months += 0.5;
-      } else if (daysRemainder > 16) {
-        months += 1;
-      }
-
-      if (compound) {
-        let interest = 0;
-        let tempPrincipal = parseFloat(principal);
-        const years = Math.floor(months / 12);
-        const remainingMonths = months % 12;
-        for (let i = 0; i < years; i++) {
-          interest += (tempPrincipal * rate * 12) / 100;
-          tempPrincipal += (tempPrincipal * rate * 12) / 100;
-        }
-        interest += (tempPrincipal * rate * remainingMonths) / 100;
-        setResult({
-          interest: interest.toFixed(2),
-          total: (parseFloat(principal) + interest).toFixed(2),
-          duration: `${months} months`,
-        });
-      } else {
-        const interest = (principal * rate * months) / 100;
-        setResult({
-          interest: interest.toFixed(2),
-          total: (parseFloat(principal) + interest).toFixed(2),
-          duration: `${months} months`,
-        });
-      }
+    // Add interest for <6 days
+    if (remainingDays < 6 && remainingDays > 0) {
+      const dailyRate = rate / 30 / 100;
+      tempInterest += currentPrincipal * dailyRate * remainingDays;
     }
-  };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black text-white flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-gray-800 rounded-2xl shadow-2xl p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-center">Gold Loan Interest Calculator</h1>
+    interest = tempInterest;
+    total = principal + interest;
+    setResult({ total, time: `${monthsCount} Months`, interest });
+  }
+} else {
+  if (mode === "daily") {
+    const days = Math.floor(timeDiff);
+    const dailyRate = rate / 30 / 100;
+    interest = principal * dailyRate * days;
+    total = principal + interest;
+    setResult({ total, time: `${days} Days`, interest });
+  } else {
+    const totalMonths = end.diff(start, 'month');
+    const remainingDays = end.diff(start.add(totalMonths, 'month'), 'day');
 
-        <div className="space-y-4">
-          <div>
-            <label className="block mb-1">Principal Amount</label>
-            <input
-              type="number"
-              value={principal}
-              onChange={(e) => setPrincipal(e.target.value)}
-              placeholder="Enter principal"
-              className="w-full p-2 rounded bg-gray-700 text-white"
-            />
-          </div>
+    let monthsCount = totalMonths;
+    if (remainingDays > 16) monthsCount += 1;
+    else if (remainingDays >= 6) monthsCount += 0.5;
 
-          <div>
-            <label className="block mb-1">Interest Rate (%)</label>
-            <input
-              type="number"
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="Monthly rate (e.g. 2)"
-              className="w-full p-2 rounded bg-gray-700 text-white"
-            />
-          </div>
+    const monthlyRate = rate / 100;
+    interest = principal * monthlyRate * monthsCount;
 
-          <div>
-            <label className="block mb-1">Start Date</label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              placeholder="Select start date"
-              className="w-full p-2 rounded bg-gray-700 text-white"
-            />
-          </div>
+    // Add interest for <6 days
+    if (remainingDays < 6 && remainingDays > 0) {
+      const dailyRate = rate / 30 / 100;
+      interest += principal * dailyRate * remainingDays;
+    }
 
-          <div>
-            <label className="block mb-1">End Date</label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              placeholder="Select end date"
-              className="w-full p-2 rounded bg-gray-700 text-white"
-            />
-          </div>
-
-          <div className="flex justify-between">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="type"
-                value="daily"
-                checked={type === "daily"}
-                onChange={() => setType("daily")}
-              />
-              Daily
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="type"
-                value="monthly"
-                checked={type === "monthly"}
-                onChange={() => setType("monthly")}
-              />
-              Monthly
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={compound}
-                onChange={() => setCompound(!compound)}
-              />
-              Compound
-            </label>
-          </div>
-
-          <button
-            onClick={handleCalculate}
-            className="w-full bg-yellow-500 text-black font-semibold p-2 rounded hover:bg-yellow-400"
-          >
-            Calculate
-          </button>
-        </div>
-
-        {result && (
-          <div className="bg-gray-900 rounded-lg p-4 mt-4 space-y-2">
-            <div><strong>Interest:</strong> ₹{result.interest}</div>
-            <div><strong>Total Amount:</strong> ₹{result.total}</div>
-            <div><strong>Duration:</strong> {result.duration}</div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    total = principal + interest;
+    setResult({ total, time: `${monthsCount} Months`, interest });
+  }
 }
+
+};
+
+return ( <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 p-4"> <div className="max-w-xl mx-auto bg-white p-6 rounded-2xl shadow-xl space-y-4"> <h1 className="text-2xl font-bold text-blue-600 text-center">Gold Loan Interest Calculator</h1>
+
+<div className="space-y-2">
+      <label className="block text-sm font-medium">Principal Amount</label>
+      <input
+        type="number"
+        placeholder="Enter principal"
+        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
+        value={principal}
+        onChange={(e) => setPrincipal(parseFloat(e.target.value))}
+      />
+    </div>
+
+    <div className="space-y-2">
+      <label className="block text-sm font-medium">Interest Rate (Monthly %)</label>
+      <input
+        type="number"
+        placeholder="Enter monthly interest rate"
+        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
+        value={rate}
+        onChange={(e) => setRate(parseFloat(e.target.value))}
+      />
+    </div>
+
+    <div className="space-y-2">
+      <label className="block text-sm font-medium">Start Date</label>
+      <input
+        type="date"
+        placeholder="Select start date"
+        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+      />
+    </div>
+
+    <div className="space-y-2">
+      <label className="block text-sm font-medium">End Date</label>
+      <input
+        type="date"
+        placeholder="Select end date"
+        className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+      />
+    </div>
+
+    <div className="flex justify-between items-center">
+      <span className="text-sm">Simple</span>
+      <label className="relative inline-flex items-center cursor-pointer">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={isCompound}
+          onChange={(e) => setIsCompound(e.target.checked)}
+        />
+        <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+      </label>
+      <span className="text-sm">Compound</span>
+    </div>
+
+    <div className="flex gap-4">
+      <button
+        onClick={() => setMode("daily")}
+        className={`flex-1 px-4 py-2 rounded-xl ${mode === "daily" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+      >
+        Daily
+      </button>
+      <button
+        onClick={() => setMode("monthly")}
+        className={`flex-1 px-4 py-2 rounded-xl ${mode === "monthly" ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-700"}`}
+      >
+        Monthly
+      </button>
+    </div>
+
+    <button
+      onClick={calculateInterest}
+      className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-medium px-4 py-2 rounded-xl shadow hover:scale-105 transition"
+    >
+      Calculate
+    </button>
+
+    {result && (
+      <div className="mt-4 bg-gray-50 p-4 rounded-xl shadow-md">
+        <p className="text-lg font-bold text-green-600">Total Amount: ₹{result.total.toFixed(2)}</p>
+        <p className="text-sm text-gray-600">Duration: {result.time}</p>
+        <p className="text-sm text-gray-600">Interest: ₹{result.interest.toFixed(2)}</p>
+      </div>
+    )}
+  </div>
+</div>
+
+); }
 
 export default App;

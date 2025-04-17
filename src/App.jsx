@@ -5,145 +5,174 @@ function App() {
   const [rate, setRate] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [interestType, setInterestType] = useState("monthly");
-  const [compoundType, setCompoundType] = useState("simple");
-  const [interest, setInterest] = useState(null);
+  const [type, setType] = useState("daily");
+  const [mode, setMode] = useState("simple");
+  const [result, setResult] = useState("");
 
-  const calculateInterest = () => {
-    const p = parseFloat(principal);
-    const r = parseFloat(rate);
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  const calculateMonths = (start, end) => {
+    const startObj = new Date(start);
+    const endObj = new Date(end);
 
-    if (isNaN(p) || isNaN(r) || !startDate || !endDate || start > end) {
-      alert("Please enter valid inputs");
+    let totalMonths =
+      (endObj.getFullYear() - startObj.getFullYear()) * 12 +
+      (endObj.getMonth() - startObj.getMonth());
+
+    const extraDays = endObj.getDate() - startObj.getDate();
+
+    if (extraDays >= 6 && extraDays <= 16) {
+      totalMonths += 0.5;
+    } else if (extraDays > 16) {
+      totalMonths += 1;
+    } else if (extraDays > 0) {
+      totalMonths += extraDays / 30;
+    }
+
+    return totalMonths;
+  };
+
+  const calculateDays = (start, end) => {
+    const startObj = new Date(start);
+    const endObj = new Date(end);
+    const diffTime = Math.abs(endObj - startObj);
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const handleCalculate = () => {
+    const P = parseFloat(principal);
+    const R = parseFloat(rate);
+    const start = startDate;
+    const end = endDate;
+
+    if (!P || !R || !start || !end) {
+      setResult("Please fill all fields.");
       return;
     }
 
-    let result = 0;
-    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    const months = Math.ceil(days / 30);
+    let interest = 0;
+    let total = 0;
 
-    if (compoundType === "compound") {
-      if (interestType === "daily") {
-        let dailyRate = r / 30;
-        let totalPrincipal = p;
-        let remainingDays = days;
+    if (type === "daily") {
+      const days = calculateDays(start, end);
+      const dailyRate = R / 30 / 100;
 
-        if (days <= 365) {
-          result = (totalPrincipal * dailyRate * days) / 100;
+      if (mode === "compound") {
+        let currentPrincipal = P;
+        if (days > 365) {
+          const interestFirstYear = currentPrincipal * dailyRate * 365;
+          currentPrincipal += interestFirstYear;
+          const remainingDays = days - 365;
+          interest = interestFirstYear + currentPrincipal * dailyRate * remainingDays;
         } else {
-          let firstYearInterest = (totalPrincipal * dailyRate * 365) / 100;
-          totalPrincipal += firstYearInterest;
-          remainingDays -= 365;
-          let nextInterest = (totalPrincipal * dailyRate * remainingDays) / 100;
-          result = firstYearInterest + nextInterest;
+          interest = currentPrincipal * dailyRate * days;
         }
+        total = P + interest;
+        setResult(
+          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Days: ${days}`
+        );
       } else {
-        let totalPrincipal = p;
-        let remainingMonths = months;
-
-        if (months <= 12) {
-          result = (totalPrincipal * r * months) / 100;
-        } else {
-          let firstYearInterest = (totalPrincipal * r * 12) / 100;
-          totalPrincipal += firstYearInterest;
-          remainingMonths -= 12;
-          let nextInterest = (totalPrincipal * r * remainingMonths) / 100;
-          result = firstYearInterest + nextInterest;
-        }
+        interest = P * dailyRate * days;
+        total = P + interest;
+        setResult(
+          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Days: ${days}`
+        );
       }
-    } else {
-      if (interestType === "daily") {
-        const dailyRate = r / 30;
-        result = (p * dailyRate * days) / 100;
+    } else if (type === "monthly") {
+      const months = calculateMonths(start, end);
+      const monthlyRate = R / 100;
+
+      if (mode === "compound") {
+        let currentPrincipal = P;
+        if (months > 12) {
+          const interestFirstYear = currentPrincipal * monthlyRate * 12;
+          currentPrincipal += interestFirstYear;
+          const remainingMonths = months - 12;
+          interest = interestFirstYear + currentPrincipal * monthlyRate * remainingMonths;
+        } else {
+          interest = currentPrincipal * monthlyRate * months;
+        }
+        total = P + interest;
+        setResult(
+          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Months: ${months}`
+        );
       } else {
-        result = (p * r * months) / 100;
+        interest = P * monthlyRate * months;
+        total = P + interest;
+        setResult(
+          `Total Amount: ₹${total.toFixed(2)}\n(Principal ₹${P} + Interest ₹${interest.toFixed(2)})\nNo. of Months: ${months}`
+        );
       }
     }
-
-    setInterest(result.toFixed(2));
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="bg-white p-6 rounded-2xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-4 text-center">Gold Loan Interest Calculator</h1>
-
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gray-100">
+      <div className="bg-white shadow-lg rounded-2xl p-6 w-full max-w-md">
+        <h1 className="text-2xl font-bold text-center mb-4">Gold Loan Interest Calculator</h1>
+        
         <input
           type="number"
-          placeholder="Principal Amount"
+          placeholder="Principal Amount (₹)"
+          className="w-full p-2 border rounded mb-3"
           value={principal}
           onChange={(e) => setPrincipal(e.target.value)}
-          className="w-full mb-3 px-4 py-2 border rounded-lg"
         />
 
         <input
           type="number"
           placeholder="Monthly Interest Rate (%)"
+          className="w-full p-2 border rounded mb-3"
           value={rate}
           onChange={(e) => setRate(e.target.value)}
-          className="w-full mb-3 px-4 py-2 border rounded-lg"
         />
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+        <label className="block text-sm mb-1">Start Date</label>
         <input
           type="date"
+          className="w-full p-2 border rounded mb-3"
+          placeholder="Start Date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
-          className="w-full mb-3 px-4 py-2 border rounded-lg"
         />
 
-        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+        <label className="block text-sm mb-1">End Date</label>
         <input
           type="date"
+          className="w-full p-2 border rounded mb-3"
+          placeholder="End Date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
-          className="w-full mb-4 px-4 py-2 border rounded-lg"
         />
 
-        {/* Compound Type Toggle */}
-        <div className="flex justify-center mb-3">
-          <button
-            className={`px-4 py-2 rounded-l ${compoundType === "simple" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setCompoundType("simple")}
+        <div className="flex justify-between mb-3">
+          <select
+            className="w-1/2 p-2 border rounded mr-2"
+            value={type}
+            onChange={(e) => setType(e.target.value)}
           >
-            Simple
-          </button>
-          <button
-            className={`px-4 py-2 rounded-r ${compoundType === "compound" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setCompoundType("compound")}
-          >
-            Compound
-          </button>
-        </div>
+            <option value="daily">Daily</option>
+            <option value="monthly">Monthly</option>
+          </select>
 
-        {/* Interest Type Toggle */}
-        <div className="flex justify-center mb-4">
-          <button
-            className={`px-4 py-2 rounded-l ${interestType === "monthly" ? "bg-green-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setInterestType("monthly")}
+          <select
+            className="w-1/2 p-2 border rounded ml-2"
+            value={mode}
+            onChange={(e) => setMode(e.target.value)}
           >
-            Monthly
-          </button>
-          <button
-            className={`px-4 py-2 rounded-r ${interestType === "daily" ? "bg-green-600 text-white" : "bg-gray-200"}`}
-            onClick={() => setInterestType("daily")}
-          >
-            Daily
-          </button>
+            <option value="simple">Simple</option>
+            <option value="compound">Compound</option>
+          </select>
         </div>
 
         <button
-          onClick={calculateInterest}
-          className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition"
+          onClick={handleCalculate}
+          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
         >
           Calculate
         </button>
 
-        {interest !== null && (
-          <div className="mt-4 text-center">
-            <p className="text-xl font-semibold">Interest: ₹{interest}</p>
+        {result && (
+          <div className="mt-4 whitespace-pre-line bg-gray-50 p-4 rounded shadow text-gray-700">
+            {result}
           </div>
         )}
       </div>

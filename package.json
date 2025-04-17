@@ -13,7 +13,7 @@
     "react-icons": "^4.10.1",
     "react-router-dom": "^6.22.3",
     "uuid": "^9.0.1",
-    "dayjs": "^1.11.10,
+    "dayjs": "^1.11.10",
     "@vitejs/plugin-react": "^4.0.0"
   },
   "devDependencies": {

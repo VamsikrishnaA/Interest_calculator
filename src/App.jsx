@@ -93,20 +93,20 @@ return ( <div className="p-4 max-w-md mx-auto space-y-4"> <h1 className="text-xl
   </select>
 
   <input
-    type="date"
-    placeholder="startDate"
-    value={startDate}
-    onChange={(e) => setStartDate(e.target.value)}
-    className="w-full p-2 border rounded"
-  />
+  type="text"
+  onFocus={(e) => (e.target.type = 'date')}
+  onBlur={(e) => (e.target.type = 'text')}
+  placeholder="Start Date"
+  className="p-2 border rounded"
+/>
 
-  <input
-    type="date"
-    placeholder="endDate"
-    value={endDate}
-    onChange={(e) => setEndDate(e.target.value)}
-    className="w-full p-2 border rounded"
-  />
+<input
+  type="text"
+  onFocus={(e) => (e.target.type = 'date')}
+  onBlur={(e) => (e.target.type = 'text')}
+  placeholder="End Date"
+  className="p-2 border rounded"
+/>
 
   <button onClick={calculateInterest} className="w-full bg-blue-500 text-white p-2 rounded">
     Calculate

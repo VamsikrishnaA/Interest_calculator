@@ -19,7 +19,7 @@ const principal = parseFloat(Principal);
 
 const interestRate = parseFloat(InterestRate);
 
-    if (!principal || !startDate || !endDate || !interestRate) return;
+    if (isNaN(principal) || !startDate || !endDate || isNaN(interestRate)) return;
 
     const days = differenceInDays(new Date(endDate), new Date(startDate));
     let interest = 0;

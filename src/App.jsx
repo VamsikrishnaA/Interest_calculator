@@ -56,68 +56,55 @@ setResult(interest.toFixed(2));
 
 };
 
-return ( <div className="p-4 max-w-md mx-auto space-y-4"> <h1 className="text-xl font-bold">Interest Generator</h1>
+return (
+  <div className="min-h-screen flex items-center justify-center bg-gray-100">
+    <div className="bg-white p-6 rounded-xl shadow-md w-full max-w-md">
+      <h1 className="text-xl font-bold mb-4 text-center">Interest Calculator</h1>
 
-<input
-    type="number"
-    placeholder="Principal Amount"
-    value={principal}
-    onChange={(e) => setPrincipal(e.target.value)}
-    className="w-full p-2 border rounded"
-  />
+      <div className="flex flex-col space-y-4">
+        <input
+          type="number"
+          placeholder="Principal Amount"
+          className="p-3 border rounded-md"
+        />
 
-  <input
-    type="number"
-    placeholder="Interest Rate (Monthly)"
-    value={rate}
-    onChange={(e) => setRate(e.target.value)}
-    className="w-full p-2 border rounded"
-  />
+        <input
+          type="text"
+          onFocus={(e) => (e.target.type = 'date')}
+          onBlur={(e) => (e.target.type = 'text')}
+          placeholder="Start Date"
+          className="p-3 border rounded-md"
+        />
 
-  <select
-    value={rateType}
-    onChange={(e) => setRateType(e.target.value)}
-    className="w-full p-2 border rounded"
-  >
-    <option value="monthly">Monthly</option>
-    <option value="daily">Daily</option>
-  </select>
+        <input
+          type="text"
+          onFocus={(e) => (e.target.type = 'date')}
+          onBlur={(e) => (e.target.type = 'text')}
+          placeholder="End Date"
+          className="p-3 border rounded-md"
+        />
 
-  <select
-    value={compound}
-    onChange={(e) => setCompound(e.target.value)}
-    className="w-full p-2 border rounded"
-  >
-    <option value="no">Simple Interest</option>
-    <option value="yes">Compound After 12M/365D</option>
-  </select>
+        <input
+          type="number"
+          placeholder="Interest Rate"
+          className="p-3 border rounded-md"
+        />
 
-  <input
-  type="text"
-  onFocus={(e) => (e.target.type = 'date')}
-  onBlur={(e) => (e.target.type = 'text')}
-  placeholder="Start Date"
-  className="p-2 border rounded"
-/>
+        <select className="p-3 border rounded-md">
+          <option value="monthly">Monthly</option>
+          <option value="daily">Daily</option>
+        </select>
 
-<input
-  type="text"
-  onFocus={(e) => (e.target.type = 'date')}
-  onBlur={(e) => (e.target.type = 'text')}
-  placeholder="End Date"
-  className="p-2 border rounded"
-/>
+        <select className="p-3 border rounded-md">
+          <option value="no">Simple Interest</option>
+          <option value="yes">Compound Interest</option>
+        </select>
 
-  <button onClick={calculateInterest} className="w-full bg-blue-500 text-white p-2 rounded">
-    Calculate
-  </button>
-
-  {result && (
-    <div className="p-2 bg-green-100 rounded text-center">
-      Interest: ₹{result}
+        <button className="bg-blue-600 text-white p-3 rounded-md">
+          Calculate
+        </button>
+      </div>
     </div>
-  )}
-</div>
-
+  </div>
 ); }
 

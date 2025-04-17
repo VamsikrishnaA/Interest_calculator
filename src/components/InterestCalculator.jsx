@@ -99,18 +99,3 @@ export default function InterestCalculator() {
     </div>
   );
 }
-
-// package.json (add these dependencies)
-{
-  "dependencies": {
-    "dayjs": "^1.11.9",
-    "file-saver": "^2.0.5",
-    "html2canvas": "^1.4.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "vite": "^4.5.13"
-  },
-  "devDependencies": {
-    "@vitejs/plugin-react": "^4.1.0"
-  }
-}

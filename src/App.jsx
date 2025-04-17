@@ -6,7 +6,7 @@ const handleCalculate = () => { if (!startDate || !endDate || principal <= 0 || 
 
 const start = dayjs(startDate);
 const end = dayjs(endDate);
-const days = end.diff(start, "day");
+const days = end.diff(start, "day")+1;
 
 let calculatedInterest = 0;
 let total = 0;

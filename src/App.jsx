@@ -101,7 +101,6 @@ return ( <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 p-4
         placeholder="Enter principal"
         className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
         value={principal}
-        onFocus={() => principal === "0" && setPrincipal("")}
         onChange={(e) => setPrincipal(parseFloat(e.target.value))}
       />
     </div>
@@ -113,7 +112,6 @@ return ( <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 p-4
         placeholder="Enter monthly interest rate"
         className="w-full p-2 rounded-xl border focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-md"
         value={rate}
-        onFocus={() => rate === "0" && setRate("")}
         onChange={(e) => setRate(parseFloat(e.target.value))}
       />
     </div>

@@ -60,21 +60,20 @@ function App() {
         />
 
         <input
-          type="date"
-          placeholder="Start Date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-full border border-gray-300 rounded-md p-2"
-        />
+  type="date"
+  value={startDate}
+  onChange={(e) => setStartDate(e.target.value)}
+  placeholder="Start Date"
+  className="border p-2 w-full rounded-md"
+/>
 
-        <input
-          type="date"
-          placeholder="End Date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="w-full border border-gray-300 rounded-md p-2"
-        />
-
+<input
+  type="date"
+  value={endDate}
+  onChange={(e) => setEndDate(e.target.value)}
+  placeholder="End Date"
+  className="border p-2 w-full rounded-md"
+/>
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}

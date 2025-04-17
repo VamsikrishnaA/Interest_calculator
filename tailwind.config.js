@@ -1,12 +1,13 @@
 /** @type {import('tailwindcss').Config} */
+import animate from "tailwind-animate/plugin";
+
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}"
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
-  darkMode: 'class',
   theme: {
-    extend: {}
+    extend: {},
   },
-  plugins: []
-}
+  plugins: [animate],
+};

@@ -1,197 +1,116 @@
-import React, { useState } from "react";
-import dayjs from "dayjs";
-import { saveAs } from "file-saver";
-import jsPDF from "jspdf";
+import React, { useState } from 'react';
+import dayjs from 'dayjs';
+import { saveAs } from 'file-saver';
+import html2canvas from 'html2canvas';
 
-const InterestCalculator = () => {
-  const [loans, setLoans] = useState([]);
-  const [form, setForm] = useState({
-    amount: "",
-    interest: "",
-    startDate: "",
-    endDate: "",
-    type: "monthly",
-  });
+export default function InterestCalculator() {
+  const [principal, setPrincipal] = useState('');
+  const [rate, setRate] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [result, setResult] = useState(null);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleFocus = (e) => {
-    if (e.target.value === "0") {
-      setForm({ ...form, [e.target.name]: "" });
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    const { amount, interest, startDate, endDate, type } = form;
-    if (!amount || !interest || !startDate || !endDate) return;
-
+  const calculateInterest = () => {
     const start = dayjs(startDate);
     const end = dayjs(endDate);
-    const duration =
-      type === "monthly"
-        ? end.diff(start, "month", true)
-        : end.diff(start, "day") + 1;
+    const totalDays = end.diff(start, 'day');
+    const monthlyRate = parseFloat(rate);
 
-    const monthlyRate = parseFloat(interest);
-    const dailyRate = monthlyRate / 30;
-    const rateToUse = type === "monthly" ? monthlyRate : dailyRate;
+    let interest = 0;
+    let months = Math.floor(totalDays / 30);
+    let remainingDays = totalDays % 30;
 
-    const interestAmount = (
-      (amount * rateToUse * duration) /
-      100
-    ).toFixed(2);
+    if (remainingDays >= 16) months += 1;
+    else if (remainingDays >= 6) months += 0.5;
 
-    const totalAmount = (parseFloat(amount) + parseFloat(interestAmount)).toFixed(2);
+    interest = principal * (monthlyRate / 100) * months;
+    const total = parseFloat(principal) + interest;
 
-    const loan = {
-      ...form,
-      interestAmount,
-      totalAmount,
-      duration: duration.toFixed(2),
-      id: Date.now(),
-    };
-
-    setLoans([loan, ...loans]);
-
-    setForm({
-      amount: "",
-      interest: "",
-      startDate: "",
-      endDate: "",
-      type: "monthly",
-    });
+    setResult({ interest, total, months, totalDays });
   };
 
-  const handleDelete = (id) => {
-    setLoans(loans.filter((loan) => loan.id !== id));
-  };
-
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(14);
-    doc.text("Loan Interest Report", 10, 10);
-
-    loans.forEach((loan, index) => {
-      const y = 20 + index * 10;
-      doc.text(
-        `${index + 1}) ₹${loan.amount} | ${loan.type} | ${loan.startDate} to ${loan.endDate} | Interest: ₹${loan.interestAmount} | Total: ₹${loan.totalAmount}`,
-        10,
-        y
-      );
+  const exportResult = async () => {
+    const element = document.getElementById('result');
+    const canvas = await html2canvas(element);
+    canvas.toBlob(blob => {
+      saveAs(blob, 'interest-result.png');
     });
-
-    doc.save("interest-report.pdf");
   };
 
   return (
-    <div className="p-4 max-w-2xl mx-auto text-white">
-      <h1 className="text-2xl font-bold mb-4 text-center">Interest Calculator</h1>
-
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-900 p-4 rounded-xl shadow-md"
+    <div className="max-w-xl mx-auto space-y-4">
+      <input
+        type="number"
+        placeholder="Principal Amount"
+        className="w-full p-2 rounded bg-gray-800 text-white"
+        value={principal}
+        onChange={e => setPrincipal(e.target.value)}
+      />
+      <input
+        type="number"
+        placeholder="Monthly Interest Rate (%)"
+        className="w-full p-2 rounded bg-gray-800 text-white"
+        value={rate}
+        onChange={e => setRate(e.target.value)}
+      />
+      <div className="flex justify-between gap-4">
+        <div className="flex-1">
+          <label className="block mb-1">Start Date</label>
+          <input
+            type="date"
+            className="w-full p-2 rounded bg-gray-800 text-white"
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block mb-1">End Date</label>
+          <input
+            type="date"
+            className="w-full p-2 rounded bg-gray-800 text-white"
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+      <button
+        onClick={calculateInterest}
+        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded"
       >
-        <input
-          type="number"
-          name="amount"
-          placeholder="Principal Amount"
-          value={form.amount}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          className="p-2 rounded bg-gray-800 focus:outline-none"
-        />
-        <input
-          type="number"
-          name="interest"
-          placeholder="Interest Rate (%)"
-          value={form.interest}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          className="p-2 rounded bg-gray-800 focus:outline-none"
-        />
-        <input
-          type="date"
-          name="startDate"
-          value={form.startDate}
-          onChange={handleChange}
-          className="p-2 rounded bg-gray-800"
-        />
-        <input
-          type="date"
-          name="endDate"
-          value={form.endDate}
-          onChange={handleChange}
-          className="p-2 rounded bg-gray-800"
-        />
-        <select
-          name="type"
-          value={form.type}
-          onChange={handleChange}
-          className="p-2 rounded bg-gray-800 col-span-full"
-        >
-          <option value="monthly">Monthly</option>
-          <option value="daily">Daily</option>
-        </select>
-        <button
-          type="submit"
-          className="bg-green-600 hover:bg-green-700 transition col-span-full py-2 rounded-xl mt-2"
-        >
-          Calculate
-        </button>
-      </form>
+        Calculate
+      </button>
 
-      {loans.length > 0 && (
-        <>
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={exportToPDF}
-              className="bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg"
-            >
-              Export PDF
-            </button>
-          </div>
-
-          <div className="mt-4 space-y-4">
-            {loans.map((loan) => (
-              <div
-                key={loan.id}
-                className="bg-gray-800 p-4 rounded-lg shadow-lg flex justify-between items-center"
-              >
-                <div>
-                  <p className="text-sm">
-                    <span className="font-semibold">Amount:</span> ₹{loan.amount}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-semibold">Type:</span> {loan.type}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-semibold">Duration:</span> {loan.duration}{" "}
-                    {loan.type === "monthly" ? "months" : "days"}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-semibold">Interest:</span> ₹{loan.interestAmount}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-semibold">Total:</span> ₹{loan.totalAmount}
-                  </p>
-                </div>
-                <button
-                  onClick={() => handleDelete(loan.id)}
-                  className="text-red-400 hover:text-red-600"
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        </>
+      {result && (
+        <div
+          id="result"
+          className="bg-gray-800 p-4 rounded shadow-lg space-y-2 mt-4"
+        >
+          <p>Interest: ₹{result.interest.toFixed(2)}</p>
+          <p>Total Amount: ₹{result.total.toFixed(2)}</p>
+          <p>Duration: {result.months} months ({result.totalDays} days)</p>
+          <button
+            onClick={exportResult}
+            className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white"
+          >
+            Export Result
+          </button>
+        </div>
       )}
     </div>
   );
-};
+}
 
-export default InterestCalculator;
+// package.json (add these dependencies)
+{
+  "dependencies": {
+    "dayjs": "^1.11.9",
+    "file-saver": "^2.0.5",
+    "html2canvas": "^1.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "vite": "^4.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.1.0"
+  }
+}

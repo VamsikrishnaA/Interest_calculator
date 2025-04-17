@@ -210,3 +210,5 @@ const InterestCalculator = () => {
     </motion.div>
   );
 };
+
+export default InterestCalculator;

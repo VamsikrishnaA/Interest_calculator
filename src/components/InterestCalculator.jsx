@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { differenceInDays } from 'date-fns';
 import { CalendarDays, Calculator, Percent, CalendarPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
+import BulkEntryCard from './components/BulkEntryCard';
 
 const InterestCalculator = () => {
   const [viewMode, setViewMode] = useState('single');
@@ -205,6 +206,48 @@ const InterestCalculator = () => {
               <div className="text-sm text-zinc-400">{result.days} Days</div>
             </motion.div>
           )}
+        </motion.div>
+      )}
+
+      {/* Bulk Mode */}
+      {viewMode === 'bulk' && (
+        <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <button
+            onClick={() =>
+              setResult((prev) => [
+                ...(Array.isArray(prev) ? prev : []),
+                {
+                  id: Date.now(),
+                  principal: '',
+                  startDate: '',
+                  endDate: '',
+                  rate: '',
+                  rateType,
+                  interestType,
+                },
+              ])
+            }
+            className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-md font-semibold"
+          >
+            + Add Entry
+          </button>
+
+          {(Array.isArray(result) ? result : []).map((entry, index) => (
+            <BulkEntryCard
+              key={entry.id}
+              entry={entry}
+              index={index}
+              onUpdate={(i, updatedEntry) => {
+                const updated = [...result];
+                updated[i] = { ...updated[i], ...updatedEntry };
+                setResult(updated);
+              }}
+              onDelete={() => {
+                const updated = result.filter((_, i) => i !== index);
+                setResult(updated);
+              }}
+            />
+          ))}
         </motion.div>
       )}
     </motion.div>

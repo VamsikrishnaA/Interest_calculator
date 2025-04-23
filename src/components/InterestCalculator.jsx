@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { differenceInDays } from 'date-fns';
 import { CalendarDays, Calculator, Percent, CalendarPlus } from 'lucide-react';
 import { motion } from 'framer-motion';
-import BulkEntryCard from './components/BulkEntryCard';
+import BulkEntryCard from './BulkEntryCard';
 
 const InterestCalculator = () => {
   const [viewMode, setViewMode] = useState('single');
@@ -35,28 +35,38 @@ const InterestCalculator = () => {
 
       if (interestType === 'simple') {
         interest = (principal * monthlyRate * months) / 100;
+        totalAmount = principal + interest;
       } else {
         let amount = principal;
         const years = Math.floor(days / 365);
         const rem = days % 365;
+
         for (let i = 0; i < years; i++) {
-          const compoundInterest = (amount * monthlyRate * 12) / 100;
-          amount += compoundInterest;
+          amount += (amount * monthlyRate * 12) / 100;
         }
-        interest = (amount * monthlyRate * Math.floor(rem / 30)) / 100;
+
+        let remMonths = Math.floor(rem / 30);
+        const remExtra = rem % 30;
+
+        if (remExtra >= 16) remMonths += 1;
+        else if (remExtra >= 6) remMonths += 0.5;
+
+        interest = (amount * monthlyRate * remMonths) / 100;
         totalAmount = amount + interest;
       }
     } else {
       if (interestType === 'simple') {
         interest = (principal * dailyRate * days) / 100;
+        totalAmount = principal + interest;
       } else {
         let amount = principal;
         const years = Math.floor(days / 365);
         const remDays = days % 365;
+
         for (let i = 0; i < years; i++) {
-          const compoundInterest = (amount * dailyRate * 365) / 100;
-          amount += compoundInterest;
+          amount += (amount * dailyRate * 365) / 100;
         }
+
         interest = (amount * dailyRate * remDays) / 100;
         totalAmount = amount + interest;
       }
@@ -64,19 +74,14 @@ const InterestCalculator = () => {
 
     setResult({
       interest: parseFloat(interest.toFixed(2)),
-      total: parseFloat((interestType === 'compound' ? totalAmount : principal + interest).toFixed(2)),
+      total: parseFloat(totalAmount.toFixed(2)),
       days
     });
   };
 
   return (
-    <motion.div
-      className="p-4 rounded-2xl shadow-md bg-zinc-900 text-white max-w-md mx-auto space-y-6"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
+    <motion.div className="p-4 rounded-2xl shadow-md bg-zinc-900 text-white max-w-md mx-auto space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
       <h1 className="text-3xl font-bold text-center">Interest Calculator</h1>
-
       {/* Mode Toggle */}
       <div className="flex justify-center gap-4 bg-zinc-800 rounded-full p-1">
         {['single', 'bulk'].map((mode) => (
@@ -93,12 +98,8 @@ const InterestCalculator = () => {
       </div>
 
       {viewMode === 'single' && (
-        <motion.div
-          className="space-y-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-        >
-          {/* Input Fields */}
+        <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          {/* Inputs */}
           <div className="space-y-2">
             <label className="block text-sm">Principal Amount</label>
             <div className="flex items-center bg-zinc-800 px-3 rounded-md">
@@ -180,7 +181,6 @@ const InterestCalculator = () => {
             ))}
           </div>
 
-          {/* Calculate Button */}
           <button
             onClick={calculateInterest}
             className="w-full bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-md font-semibold transition"
@@ -209,45 +209,9 @@ const InterestCalculator = () => {
         </motion.div>
       )}
 
-      {/* Bulk Mode */}
       {viewMode === 'bulk' && (
-        <motion.div className="space-y-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <button
-            onClick={() =>
-              setResult((prev) => [
-                ...(Array.isArray(prev) ? prev : []),
-                {
-                  id: Date.now(),
-                  principal: '',
-                  startDate: '',
-                  endDate: '',
-                  rate: '',
-                  rateType,
-                  interestType,
-                },
-              ])
-            }
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-md font-semibold"
-          >
-            + Add Entry
-          </button>
-
-          {(Array.isArray(result) ? result : []).map((entry, index) => (
-            <BulkEntryCard
-              key={entry.id}
-              entry={entry}
-              index={index}
-              onUpdate={(i, updatedEntry) => {
-                const updated = [...result];
-                updated[i] = { ...updated[i], ...updatedEntry };
-                setResult(updated);
-              }}
-              onDelete={() => {
-                const updated = result.filter((_, i) => i !== index);
-                setResult(updated);
-              }}
-            />
-          ))}
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <BulkEntryCard />
         </motion.div>
       )}
     </motion.div>

@@ -88,3 +88,4 @@ const calculateInterest = () => {
     days,
   });
 };
+export default InterestCalculator;

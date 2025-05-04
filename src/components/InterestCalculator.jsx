@@ -6,8 +6,8 @@ const InterestCalculator = () => {
   const [InterestRate, setInterestRate] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [rateType, setRateType] = useState('monthly');
   const [interestType, setInterestType] = useState('simple');
+  const [rateType, setRateType] = useState('monthly');
   const [result, setResult] = useState(null);
 
   const calculateInterest = () => {
@@ -40,31 +40,25 @@ const InterestCalculator = () => {
 
         totalAmount = principal + interest;
       } else {
+        // Compound Interest with 365-day slab + simple interest for remaining days
         let amount = principal;
         let remainingDays = days;
+        let totalInterest = 0;
 
-        const fullYears = Math.floor(remainingDays / 365);
-        remainingDays %= 365;
-
-        for (let i = 0; i < fullYears; i++) {
-          const yearlyInterest = (amount * interestRate * 12) / 100;
-          amount += yearlyInterest;
+        while (remainingDays >= 365) {
+          const slabInterest = (amount * interestRate * 12) / 100;
+          amount += slabInterest;
+          totalInterest += slabInterest;
+          remainingDays -= 365;
         }
 
-        const leftoverMonths = Math.floor(remainingDays / 30);
-        const extraDays = remainingDays % 30;
-        let adjustedMonths = leftoverMonths;
-
-        if (extraDays > 16) adjustedMonths += 1;
-        else if (extraDays >= 6) adjustedMonths += 0.5;
-
-        const monthlyInterest = (amount * interestRate * adjustedMonths) / 100;
         const dailyRate = interestRate / 30;
-        const extraDaysInterest =
-          extraDays < 6 ? (amount * dailyRate * extraDays) / 100 : 0;
+        const leftoverInterest = (amount * dailyRate * remainingDays) / 100;
+        amount += leftoverInterest;
+        totalInterest += leftoverInterest;
 
-        interest = monthlyInterest + extraDaysInterest;
-        totalAmount = amount + interest;
+        interest = totalInterest;
+        totalAmount = amount;
       }
     } else if (rateType === 'daily') {
       if (interestType === 'simple') {
@@ -72,20 +66,25 @@ const InterestCalculator = () => {
         interest = (principal * dailyRate * days) / 100;
         totalAmount = principal + interest;
       } else {
+        // Compound Interest with 365-day slab + simple interest for remaining days
         let amount = principal;
         let remainingDays = days;
+        let totalInterest = 0;
 
-        const fullYears = Math.floor(remainingDays / 365);
-        remainingDays %= 365;
-
-        for (let i = 0; i < fullYears; i++) {
-          const yearlyInterest = (amount * interestRate * 12) / 100;
-          amount += yearlyInterest;
+        while (remainingDays >= 365) {
+          const slabInterest = (amount * interestRate * 12) / 100;
+          amount += slabInterest;
+          totalInterest += slabInterest;
+          remainingDays -= 365;
         }
 
         const dailyRate = interestRate / 30;
-        interest = (amount * dailyRate * remainingDays) / 100;
-        totalAmount = amount + interest;
+        const leftoverInterest = (amount * dailyRate * remainingDays) / 100;
+        amount += leftoverInterest;
+        totalInterest += leftoverInterest;
+
+        interest = totalInterest;
+        totalAmount = amount;
       }
     }
 
@@ -97,10 +96,31 @@ const InterestCalculator = () => {
   };
 
   return (
-    <div>
-      <h2>Interest Calculator</h2>
-      {/* Add your inputs and buttons here */}
-      {/* Example: <input value={Principal} onChange={(e) => setPrincipal(e.target.value)} /> */}
+    <div className="p-4 max-w-xl mx-auto">
+      <h2 className="text-xl font-bold mb-4">Gold Loan Interest Calculator</h2>
+      <div className="grid gap-2">
+        <input type="number" placeholder="Principal Amount" value={Principal} onChange={(e) => setPrincipal(e.target.value)} className="p-2 border rounded" />
+        <input type="number" placeholder="Interest Rate (%)" value={InterestRate} onChange={(e) => setInterestRate(e.target.value)} className="p-2 border rounded" />
+        <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="p-2 border rounded" />
+        <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="p-2 border rounded" />
+        <select value={interestType} onChange={(e) => setInterestType(e.target.value)} className="p-2 border rounded">
+          <option value="simple">Simple Interest</option>
+          <option value="compound">Compound Interest</option>
+        </select>
+        <select value={rateType} onChange={(e) => setRateType(e.target.value)} className="p-2 border rounded">
+          <option value="monthly">Monthly Rate</option>
+          <option value="daily">Daily Rate</option>
+        </select>
+        <button onClick={calculateInterest} className="p-2 bg-blue-600 text-white rounded">Calculate</button>
+      </div>
+
+      {result && (
+        <div className="mt-4 p-4 border rounded bg-gray-100">
+          <p><strong>Total Days:</strong> {result.days}</p>
+          <p><strong>Interest:</strong> ₹{result.interest}</p>
+          <p><strong>Total Amount:</strong> ₹{result.total}</p>
+        </div>
+      )}
     </div>
   );
 };

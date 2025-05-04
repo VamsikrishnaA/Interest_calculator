@@ -18,7 +18,7 @@ const InterestCalculator = () => {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const days = differenceInDays(end, start);
+    const days = differenceInDays(end, start)+1;
 
     let interest = 0;
     let totalAmount = 0;

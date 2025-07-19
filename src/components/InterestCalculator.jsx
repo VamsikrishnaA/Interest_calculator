@@ -1,4 +1,4 @@
-import React, { useState } from 'react'; import dayjs from 'dayjs'; import { saveAs } from 'file-saver'; import html2canvas from 'html2canvas';
+import React, { useState } from 'react'; import dayjs from 'dayjs'; import { saveAs } from 'file-saver'; import html2canvas from 'html2canvas';import BulkEntryCard from './components/BulkEntryCard';
 
 export default function InterestCalculator() { const [principal, setPrincipal] = useState(''); const [rate, setRate] = useState(''); const [startDate, setStartDate] = useState(''); const [endDate, setEndDate] = useState(''); const [result, setResult] = useState(null);
 

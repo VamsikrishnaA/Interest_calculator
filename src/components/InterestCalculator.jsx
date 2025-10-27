@@ -1,5 +1,8 @@
 import React, { useState } from "react";
 
+
+
+
 export default function InterestCalculator() {
 const [principal, setPrincipal] = useState("");
 const [monthlyRate, setMonthlyRate] = useState("");
@@ -9,11 +12,17 @@ const [mode, setMode] = useState("monthly");
 const [interestType, setInterestType] = useState("simple");
 const [results, setResults] = useState([]);
 
+
+
+
 const inclusiveDaysBetween = (start, end) => {
 const s = new Date(start + "T00:00:00");
 const e = new Date(end + "T00:00:00");
 return Math.floor((e - s) / (1000 * 60 * 60 * 24)) + 1;
 };
+
+
+
 
 const countMonthsAndDays = (start, end) => {
 const s = new Date(start + "T00:00:00");
@@ -26,7 +35,13 @@ else if (dayDiff > 0 && dayDiff < 6) months += dayDiff / 30;
 return Math.max(months, 0);
 };
 
+
+
+
 const round = (n) => Math.round(n * 100) / 100;
+
+
+
 
 const calculate = () => {
 if (!principal || !monthlyRate || !startDate || !endDate) {
@@ -34,7 +49,6 @@ alert("Please fill all fields");
 return;
 }
 
-```
 const P = parseFloat(principal);
 const rMonthly = parseFloat(monthlyRate);
 const totalDays = inclusiveDaysBetween(startDate, endDate);
@@ -103,17 +117,26 @@ const newResult = {
 };
 
 setResults([newResult, ...results]);
-```
+
+
+
 
 };
+
+
+
 
 const deleteResult = (id) => {
 setResults(results.filter((r) => r.id !== id));
 };
 
-return ( <div className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow-lg"> <h2 className="text-2xl font-semibold mb-4">Gold Loan Interest Calculator</h2>
 
-```
+
+
+return (
+
+Gold Loan Interest Calculator
+
   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
     <label className="flex flex-col">
       <span className="text-sm">Principal (₹)</span>
@@ -246,7 +269,9 @@ return ( <div className="max-w-3xl mx-auto p-6 bg-white rounded-2xl shadow-lg"> 
     </div>
   )}
 </div>
-```
+
+
+
 
 );
 }

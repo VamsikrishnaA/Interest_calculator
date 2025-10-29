@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2 } from "lucide-react";
 
-/**
+/** 
  * FINAL STABLE VERSION (UI same as your perfect one)
  * - Dark-gold animated theme
  * - Inclusive days counting

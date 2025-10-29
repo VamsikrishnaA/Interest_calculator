@@ -366,12 +366,16 @@ export default function InterestCalculator() {
 
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                   <div className="p-2 rounded bg-[#0f0f0f]">
-                    <div className="text-gray-300 text-xs">Start</div>
-                    <div className="text-white">{r.startDate}</div>
+                    <div className="text-gray-300 text-xs">Start Date</div>
+                    <div className="text-white">
+  {new Date(r.startDate).toLocaleDateString('en-GB').replace(/\//g, '-')}
+</div>
                   </div>
                   <div className="p-2 rounded bg-[#0f0f0f]">
-                    <div className="text-gray-300 text-xs">End</div>
-                    <div className="text-white">{r.endDate}</div>
+                    <div className="text-gray-300 text-xs">End Date</div>
+                    <div className="text-white">
+  {new Date(r.endDate).toLocaleDateString('en-GB').replace(/\//g, '-')}
+</div>
                   </div>
                   <div className="p-2 rounded bg-[#0f0f0f]">
                     <div className="text-gray-300 text-xs">{r.mode === "daily" ? "Days (incl.)" : "Months (incl.)"}</div>

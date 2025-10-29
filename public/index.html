@@ -1,3 +1,38 @@
-<link rel="manifest" href="/manifest.json" />
-<meta name="theme-color" content="#3B2D00" />
-<link rel="icon" href="/icons/icon-192.png" />
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/icons/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#3B2D00" />
+    <title>Gold Loan Interest Calculator</title>
+
+    <!-- ✅ PWA manifest -->
+    <link rel="manifest" href="/manifest.json" />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- ✅ Your bundled React code will load here -->
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ✅ Service Worker registration & install-event forwarding -->
+    <script>
+      // Register service worker
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker
+            .register("/sw.js")
+            .then((reg) => console.log("SW registered:", reg))
+            .catch((err) => console.warn("SW registration failed:", err));
+        });
+      }
+
+      // Forward install prompt to React
+      window.addEventListener("beforeinstallprompt", (e) => {
+        e.preventDefault();
+        window.deferredInstallPrompt = e;
+      });
+    </script>
+  </body>
+</html>

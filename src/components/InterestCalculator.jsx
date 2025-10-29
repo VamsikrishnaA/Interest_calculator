@@ -1,232 +1,294 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
-function InterestCalculator() {
+/**
+ * InterestCalculator (PWA-ready)
+ * - Shows "Install App" button (manual)
+ * - Persists results in localStorage
+ * - Uses inclusive-day count and monthly partial rules
+ * - Monthly compounding in 12-month blocks, daily compounding in 365-day blocks
+ */
+
+export default function InterestCalculator() {
   const [principal, setPrincipal] = useState("");
-  const [rate, setRate] = useState("");
+  const [monthlyRate, setMonthlyRate] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [mode, setMode] = useState("daily");
+  const [mode, setMode] = useState("monthly");
   const [interestType, setInterestType] = useState("simple");
   const [results, setResults] = useState([]);
+  const [installAvailable, setInstallAvailable] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
 
-  const calculateDays = (s, e) => {
-    const sd = new Date(s);
-    const ed = new Date(e);
-    const diff = Math.floor((ed - sd) / (1000 * 60 * 60 * 24)) + 1; // inclusive
-    return diff;
+  // Load saved results from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("goldcalc_results");
+    if (saved) {
+      try {
+        setResults(JSON.parse(saved));
+      } catch {}
+    }
+  }, []);
+
+  // Save results whenever they change
+  useEffect(() => {
+    localStorage.setItem("goldcalc_results", JSON.stringify(results));
+  }, [results]);
+
+  // Listen for beforeinstallprompt forwarded from index.html
+  useEffect(() => {
+    const handler = () => {
+      // the site-level script stores the event on window.deferredInstallPrompt
+      if (window.deferredInstallPrompt) {
+        setDeferredPrompt(window.deferredInstallPrompt);
+        setInstallAvailable(true);
+      }
+    };
+    window.addEventListener("load", handler);
+    // Also check immediately
+    if (window.deferredInstallPrompt) {
+      setDeferredPrompt(window.deferredInstallPrompt);
+      setInstallAvailable(true);
+    }
+    return () => window.removeEventListener("load", handler);
+  }, []);
+
+  // Helper functions: inclusive days and months count (your rules)
+  const inclusiveDaysBetween = (start, end) => {
+    const s = new Date(start + "T00:00:00");
+    const e = new Date(end + "T00:00:00");
+    return Math.floor((e - s) / (1000 * 60 * 60 * 24)) + 1;
   };
 
-  const calculateMonths = (s, e) => {
-    const sd = new Date(s);
-    const ed = new Date(e);
-    let months =
-      (ed.getFullYear() - sd.getFullYear()) * 12 + (ed.getMonth() - sd.getMonth());
-    const dayDiff = ed.getDate() - sd.getDate();
-    if (dayDiff >= 6 && dayDiff <= 16) months += 0.5;
-    else if (dayDiff > 16) months += 1;
-    else if (dayDiff < 0 && Math.abs(dayDiff) > 16) months -= 1; // handle negative overlap
-    return months;
-  };
+  const getMonthsCount = (startISO, endISO) => {
+    const start = new Date(startISO + "T00:00:00");
+    const end = new Date(endISO + "T00:00:00");
+    if (end < start) return { error: "invalid" };
 
-  const handleCalculate = () => {
-    if (!principal || !rate || !startDate || !endDate) return;
-
-    const p = parseFloat(principal);
-    const r = parseFloat(rate);
-    let totalInterest = 0;
-    let totalAmount = 0;
-    let durationLabel = "";
-    let count = 0;
-
-    if (mode === "daily") {
-      const totalDays = calculateDays(startDate, endDate);
-      durationLabel = `${totalDays} Days`;
-
-      if (interestType === "simple") {
-        const dailyRate = r / 30 / 100;
-        totalInterest = p * dailyRate * totalDays;
-      } else {
-        // Compound every 365 days
-        const dailyRate = r / 30 / 100;
-        let remaining = totalDays;
-        let tempPrincipal = p;
-        while (remaining > 0) {
-          const block = Math.min(365, remaining);
-          const interest = tempPrincipal * dailyRate * block;
-          remaining -= block;
-          tempPrincipal += interest;
-        }
-        totalInterest = tempPrincipal - p;
-      }
-
-      totalAmount = p + totalInterest;
-      count = totalDays;
-    } else {
-      const totalMonths = calculateMonths(startDate, endDate);
-      durationLabel = `${totalMonths} Months`;
-
-      if (interestType === "simple") {
-        const monthlyRate = r / 100;
-        totalInterest = p * monthlyRate * totalMonths;
-      } else {
-        // Compound every 12 months
-        const monthlyRate = r / 100;
-        let remaining = totalMonths;
-        let tempPrincipal = p;
-        while (remaining > 0) {
-          const block = Math.min(12, remaining);
-          const interest = tempPrincipal * monthlyRate * block;
-          remaining -= block;
-          tempPrincipal += interest;
-        }
-        totalInterest = tempPrincipal - p;
-      }
-
-      totalAmount = p + totalInterest;
-      count = totalMonths;
+    function addOneMonth(d) {
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const day = d.getDate();
+      const next = new Date(y, m + 1, day);
+      if (next.getDate() !== day) next.setDate(0);
+      return next;
     }
 
-    const newResult = {
+    let cursor = new Date(start);
+    let fullMonths = 0;
+    while (true) {
+      const next = addOneMonth(cursor);
+      if (next <= end) {
+        fullMonths++;
+        cursor = next;
+      } else break;
+    }
+
+    const daysCovered = Math.floor((cursor - start) / (1000 * 60 * 60 * 24));
+    const totalInclusive = inclusiveDaysBetween(startISO, endISO);
+    const remainingDays = totalInclusive - daysCovered;
+
+    let monthsCount = fullMonths;
+    let partialRule = "days";
+    if (remainingDays < 6) partialRule = "days";
+    else if (remainingDays >= 6 && remainingDays <= 16) {
+      monthsCount += 0.5;
+      partialRule = "half";
+    } else {
+      monthsCount += 1;
+      partialRule = "full";
+    }
+
+    return { fullMonths, remainingDays, monthsCount, partialRule, totalInclusive };
+  };
+
+  const round = (n, digits = 2) => {
+    const m = Math.pow(10, digits);
+    return Math.round(n * m) / m;
+  };
+
+  // Calculation logic (same as we discussed)
+  const calculate = () => {
+    if (!principal || !monthlyRate || !startDate || !endDate) {
+      alert("Please fill all fields");
+      return;
+    }
+    const P = Number(principal);
+    const rMonthly = Number(monthlyRate);
+    const totalDays = inclusiveDaysBetween(startDate, endDate);
+    const infoMonths = getMonthsCount(startDate, endDate);
+
+    let interest = 0;
+    let total = 0;
+    let extra = {};
+
+    if (interestType === "simple") {
+      if (mode === "daily") {
+        const dailyRate = rMonthly / 30 / 100;
+        interest = P * dailyRate * totalDays;
+      } else {
+        // monthly simple using monthsCount
+        interest = P * (rMonthly / 100) * infoMonths.monthsCount;
+        if (infoMonths.partialRule === "days") {
+          // if partial treated as days, add day-portion
+          const dailyRate = rMonthly / 30 / 100;
+          const dayPortion = P * dailyRate * infoMonths.remainingDays;
+          interest = P * (rMonthly / 100) * infoMonths.fullMonths + dayPortion;
+        }
+        extra = infoMonths;
+      }
+      total = P + interest;
+    } else {
+      // Compound
+      if (mode === "daily") {
+        const dailyRate = rMonthly / 30 / 100;
+        let remaining = totalDays;
+        let currP = P;
+        let acc = 0;
+        while (remaining >= 365) {
+          const blockInt = currP * dailyRate * 365;
+          acc += blockInt;
+          currP += blockInt;
+          remaining -= 365;
+        }
+        if (remaining > 0) {
+          const rem = currP * dailyRate * remaining;
+          acc += rem;
+        }
+        interest = acc;
+        total = P + interest;
+        extra = { totalDays };
+      } else {
+        // monthly compounding: compound per 12 months
+        let months = infoMonths.monthsCount;
+        let currP = P;
+        let acc = 0;
+        while (months >= 12) {
+          const blockInt = currP * (rMonthly / 100) * 12;
+          acc += blockInt;
+          currP += blockInt;
+          months -= 12;
+        }
+        if (months > 0) {
+          const rem = currP * (rMonthly / 100) * months;
+          acc += rem;
+        }
+        interest = acc;
+        total = P + interest;
+        extra = infoMonths;
+      }
+    }
+
+    const entry = {
       id: Date.now(),
+      principal: round(P),
+      monthlyRate: rMonthly,
       mode,
       interestType,
       startDate,
       endDate,
-      rate: r,
-      principal: p,
-      totalInterest,
-      totalAmount,
-      count,
+      interest: round(interest),
+      total: round(total),
+      ...extra,
     };
 
-    setResults([newResult, ...results]);
+    setResults((prev) => [entry, ...prev]);
   };
 
-  const handleDelete = (id) => {
-    setResults(results.filter((r) => r.id !== id));
+  const deleteResult = (id) => setResults((prev) => prev.filter((r) => r.id !== id));
+
+  // Manual install button handler — uses deferred prompt stored on window
+  const handleInstallClick = async () => {
+    const prompt = deferredPrompt || window.deferredInstallPrompt;
+    if (!prompt) {
+      alert("Install prompt not available on this device/browser.");
+      return;
+    }
+    prompt.prompt();
+    const choice = await prompt.userChoice;
+    // reset
+    setDeferredPrompt(null);
+    setInstallAvailable(false);
+    window.deferredInstallPrompt = null;
+    if (choice.outcome === "accepted") {
+      console.log("User accepted the install");
+    } else {
+      console.log("User dismissed the install");
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-900 text-white p-4 flex flex-col items-center">
-      <h1 className="text-2xl font-bold mb-4 text-yellow-400">
-        Gold Loan Interest Calculator
-      </h1>
-
-      <div className="bg-gray-800 p-4 rounded-2xl w-full max-w-md shadow-lg">
-        <div className="mb-3">
-          <label className="block text-sm mb-1">Principal (₹)</label>
-          <input
-            type="number"
-            className="w-full p-2 rounded bg-gray-700 outline-none"
-            value={principal}
-            onChange={(e) => setPrincipal(e.target.value)}
-          />
-        </div>
-
-        <div className="mb-3">
-          <label className="block text-sm mb-1">Interest Rate (%)</label>
-          <input
-            type="number"
-            className="w-full p-2 rounded bg-gray-700 outline-none"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-          />
-        </div>
-
-        <div className="mb-3 flex gap-2">
-          <div className="flex-1">
-            <label className="block text-sm mb-1">Start Date</label>
-            <input
-              type="date"
-              className="w-full p-2 rounded bg-gray-700 outline-none"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm mb-1">End Date</label>
-            <input
-              type="date"
-              className="w-full p-2 rounded bg-gray-700 outline-none"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex gap-3 items-center">
-            <label className="text-sm">Mode:</label>
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="bg-gray-700 p-1 rounded"
-            >
-              <option value="daily">Daily</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-
-          <div className="flex gap-3 items-center">
-            <label className="text-sm">Type:</label>
-            <select
-              value={interestType}
-              onChange={(e) => setInterestType(e.target.value)}
-              className="bg-gray-700 p-1 rounded"
-            >
-              <option value="simple">Simple</option>
-              <option value="compound">Compound</option>
-            </select>
-          </div>
-        </div>
-
-        <button
-          onClick={handleCalculate}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 rounded-lg mt-2"
-        >
-          Calculate
-        </button>
+    <div className="max-w-3xl mx-auto p-6 bg-white dark:bg-gray-900 dark:text-white rounded-2xl shadow-lg">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl font-semibold">Gold Loan Interest Calculator</h2>
+        {installAvailable && (
+          <button
+            onClick={handleInstallClick}
+            className="px-3 py-1 bg-yellow-500 rounded text-black text-sm"
+          >
+            📲 Install App
+          </button>
+        )}
       </div>
 
-      <div className="w-full max-w-2xl mt-6 space-y-4">
+      {/* Inputs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label className="flex flex-col">
+          <span className="text-sm">Principal (₹)</span>
+          <input type="number" value={principal} onChange={(e) => setPrincipal(e.target.value)} className="mt-1 p-2 border rounded" />
+        </label>
+
+        <label className="flex flex-col">
+          <span className="text-sm">Monthly Rate (%)</span>
+          <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} className="mt-1 p-2 border rounded" />
+        </label>
+
+        <label className="flex flex-col">
+          <span className="text-sm">Start Date</span>
+          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 p-2 border rounded" />
+        </label>
+
+        <label className="flex flex-col">
+          <span className="text-sm">End Date</span>
+          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 p-2 border rounded" />
+        </label>
+      </div>
+
+      <div className="flex items-center gap-4 mt-4">
+        <div>
+          <label className="mr-2">Mode</label>
+          <select value={mode} onChange={(e) => setMode(e.target.value)} className="p-2 border rounded">
+            <option value="monthly">Monthly</option>
+            <option value="daily">Daily</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mr-2">Type</label>
+          <select value={interestType} onChange={(e) => setInterestType(e.target.value)} className="p-2 border rounded">
+            <option value="simple">Simple</option>
+            <option value="compound">Compound</option>
+          </select>
+        </div>
+
+        <button onClick={calculate} className="ml-auto px-4 py-2 bg-blue-600 text-white rounded">Calculate</button>
+      </div>
+
+      {/* Results */}
+      <div className="mt-6 space-y-4">
         {results.map((r) => (
-          <div
-            key={r.id}
-            className="bg-gray-800 p-4 rounded-xl shadow-md relative"
-          >
-            <button
-              onClick={() => handleDelete(r.id)}
-              className="absolute top-2 right-3 text-red-400 hover:text-red-500 text-xl"
-            >
-              ✖
-            </button>
-            <p className="font-semibold text-yellow-400 text-lg">
-              ₹{r.principal.toLocaleString()} @ {r.rate}% ({r.interestType})
-            </p>
-            <p className="text-sm text-gray-400">Mode: {r.mode}</p>
-            <p className="text-sm text-gray-400">
-              Start: {r.startDate} | End: {r.endDate}
-            </p>
-            <p className="text-sm mt-2 text-blue-400">
-              Total {r.mode === "daily" ? "Days" : "Months"}: {r.count}
-            </p>
-            <p className="mt-2">
-              Interest:{" "}
-              <span className="text-green-400 font-bold">
-                ₹{r.totalInterest.toFixed(2)}
-              </span>
-            </p>
-            <p className="text-lg">
-              Total Amount:{" "}
-              <span className="text-yellow-400 font-bold">
-                ₹{r.totalAmount.toFixed(2)}
-              </span>
-            </p>
+          <div key={r.id} className="border rounded p-4 bg-gray-50 dark:bg-gray-800 relative">
+            <button onClick={() => deleteResult(r.id)} className="absolute top-2 right-3 text-red-600">✖</button>
+            <div className="font-semibold">₹{r.principal} @ {r.monthlyRate}% ({r.interestType})</div>
+            <div className="text-sm">Mode: {r.mode}</div>
+            <div className="text-sm">From {r.startDate} to {r.endDate}</div>
+            <div className="mt-1 text-sm font-medium">
+              Total {r.mode === "daily" ? "Days" : "Months"}: {r.mode === "daily" ? r.totalDays : r.totalMonths ?? r.monthsCount ?? (r.monthsCount || r.totalMonths)}
+            </div>
+            <div className="mt-2">Interest: <span className="font-semibold">₹{r.interest}</span></div>
+            <div>Total: <span className="font-semibold">₹{r.total}</span></div>
           </div>
         ))}
       </div>
     </div>
   );
 }
-
-export default InterestCalculator;

@@ -1,14 +1,3 @@
-Perfect 🔥 — here’s your full InterestCalculator.jsx file with:
-✅ Your existing animated UI untouched
-✅ Dark gold theme intact
-✅ Simple/Compound toggle
-✅ Correct date display format → DD-MM-YYYY
-
-Just replace your current file’s content with this 👇
-
-
----
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -261,17 +250,3 @@ export default function InterestCalculator() {
     </div>
   );
 }
-
-
----
-
-💡 Now you’ll see:
-
-Dates show as 23-10-2025 etc.
-
-UI, dark gold theme, animations → untouched.
-
-Fully compatible with your deployed Vercel + PWA setup.
-
-
-Would you like me to send the manifest + icons setup next for offline install (Add to Home Screen)?

@@ -29,11 +29,13 @@ export default function InterestCalculator() {
 
     let totalInterest = 0;
     let totalAmount = 0;
+    let months = 0;
 
     if (mode === "daily") {
       const dailyRate = rate / 30 / 100;
       if (type === "simple") {
         totalInterest = principal * dailyRate * diffDays;
+        totalAmount = Number(principal) + totalInterest;
       } else {
         let remainingDays = diffDays;
         let currentPrincipal = principal;
@@ -46,8 +48,7 @@ export default function InterestCalculator() {
         totalAmount = currentPrincipal + totalInterest;
       }
     } else {
-      // Monthly mode
-      let months =
+      months =
         (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
       if (e.getDate() - s.getDate() >= 16) months += 1;
       else if (e.getDate() - s.getDate() >= 6) months += 0.5;
@@ -55,7 +56,7 @@ export default function InterestCalculator() {
       const monthlyRate = rate / 100;
       if (type === "simple") {
         totalInterest = principal * monthlyRate * months;
-        totalAmount = principal + totalInterest;
+        totalAmount = Number(principal) + totalInterest;
       } else {
         let remainingMonths = months;
         let currentPrincipal = principal;
@@ -78,7 +79,7 @@ export default function InterestCalculator() {
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       totalInterest: totalInterest.toFixed(2),
-      totalAmount: (Number(principal) + Number(totalInterest)).toFixed(2),
+      totalAmount: totalAmount.toFixed(2),
       duration: mode === "daily" ? `${diffDays} days` : `${months} months`,
     };
 
@@ -88,6 +89,29 @@ export default function InterestCalculator() {
   const deleteResult = (id) => {
     setResults(results.filter((r) => r.id !== id));
   };
+
+  const Toggle = ({ label1, label2, value, setValue }) => (
+    <div className="flex items-center gap-2">
+      <span className={value === label1.toLowerCase() ? "text-yellow-400" : "text-gray-400"}>
+        {label1}
+      </span>
+      <div
+        onClick={() =>
+          setValue(value === label1.toLowerCase() ? label2.toLowerCase() : label1.toLowerCase())
+        }
+        className="w-12 h-6 bg-gray-700 rounded-full relative cursor-pointer transition-all duration-300"
+      >
+        <motion.div
+          className="absolute top-0.5 left-0.5 w-5 h-5 bg-yellow-400 rounded-full"
+          animate={{ x: value === label1.toLowerCase() ? 0 : 24 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        />
+      </div>
+      <span className={value === label2.toLowerCase() ? "text-yellow-400" : "text-gray-400"}>
+        {label2}
+      </span>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white flex flex-col items-center py-10 px-4">
@@ -135,30 +159,9 @@ export default function InterestCalculator() {
           </div>
         </div>
 
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span>Mode:</span>
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded-lg"
-            >
-              <option value="daily">Daily</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span>Type:</span>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="bg-gray-700 text-white p-2 rounded-lg"
-            >
-              <option value="simple">Simple</option>
-              <option value="compound">Compound</option>
-            </select>
-          </div>
+        <div className="flex justify-between items-center mt-3">
+          <Toggle label1="Daily" label2="Monthly" value={mode} setValue={setMode} />
+          <Toggle label1="Simple" label2="Compound" value={type} setValue={setType} />
         </div>
 
         <motion.button

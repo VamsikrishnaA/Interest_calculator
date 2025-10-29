@@ -1,216 +1,167 @@
 import React, { useState } from "react";
-import { format } from "date-fns";
-import { motion } from "framer-motion";
-import { Calculator, Calendar, Trash2 } from "lucide-react";
+import dayjs from "dayjs";
 
 export default function InterestCalculator() {
   const [principal, setPrincipal] = useState("");
-  const [rate, setRate] = useState("");
+  const [interestRate, setInterestRate] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [mode, setMode] = useState("daily");
-  const [type, setType] = useState("simple");
+  const [mode, setMode] = useState("Simple"); // Simple or Compound
+  const [interestType, setInterestType] = useState("Monthly"); // Monthly or Daily
   const [results, setResults] = useState([]);
 
-  const formatDate = (date) => {
-    if (!date) return "";
-    const d = new Date(date);
-    return `${String(d.getDate()).padStart(2, "0")}-${String(
-      d.getMonth() + 1
-    ).padStart(2, "0")}-${d.getFullYear()}`;
-  };
+  // Date format helper
+  const formatDate = (date) => dayjs(date).format("DD-MM-YYYY");
 
+  // Interest calculation
   const calculateInterest = () => {
-    if (!principal || !rate || !startDate || !endDate) return;
+    if (!principal || !interestRate || !startDate || !endDate) return;
 
-    const s = new Date(startDate);
-    const e = new Date(endDate);
-    const diffDays = Math.floor((e - s) / (1000 * 60 * 60 * 24)) + 1;
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+    const totalDays = end.diff(start, "day") + 1;
 
     let totalInterest = 0;
     let totalAmount = 0;
-    let months = 0;
+    let remainingDays = totalDays;
+    let currentPrincipal = Number(principal);
+    const rate = Number(interestRate);
 
-    if (mode === "daily") {
-      const dailyRate = rate / 30 / 100;
-      if (type === "simple") {
-        totalInterest = principal * dailyRate * diffDays;
-        totalAmount = Number(principal) + totalInterest;
+    if (mode === "Simple") {
+      if (interestType === "Monthly") {
+        const months = Math.floor(totalDays / 30);
+        totalInterest = (currentPrincipal * rate * months) / 100;
       } else {
-        let remainingDays = diffDays;
-        let currentPrincipal = principal;
-        while (remainingDays > 365) {
-          const yearlyInterest = currentPrincipal * dailyRate * 365;
-          currentPrincipal += yearlyInterest;
-          remainingDays -= 365;
-        }
-        totalInterest = currentPrincipal * dailyRate * remainingDays;
-        totalAmount = currentPrincipal + totalInterest;
+        const dailyRate = rate / 30;
+        totalInterest = (currentPrincipal * dailyRate * totalDays) / 100;
       }
     } else {
-      months =
-        (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
-      if (e.getDate() - s.getDate() >= 16) months += 1;
-      else if (e.getDate() - s.getDate() >= 6) months += 0.5;
-
-      const monthlyRate = rate / 100;
-      if (type === "simple") {
-        totalInterest = principal * monthlyRate * months;
-        totalAmount = Number(principal) + totalInterest;
-      } else {
-        let remainingMonths = months;
-        let currentPrincipal = principal;
-        while (remainingMonths > 12) {
-          const yearlyInterest = currentPrincipal * monthlyRate * 12;
-          currentPrincipal += yearlyInterest;
-          remainingMonths -= 12;
-        }
-        totalInterest = currentPrincipal * monthlyRate * remainingMonths;
-        totalAmount = currentPrincipal + totalInterest;
+      // Compound logic
+      while (remainingDays > 365) {
+        const yearlyInterest = (currentPrincipal * (rate * 12)) / 100;
+        currentPrincipal += yearlyInterest;
+        remainingDays -= 365;
       }
+      const remainingInterest = (currentPrincipal * (rate / 30) * remainingDays) / 100;
+      totalInterest = remainingInterest + (currentPrincipal - principal);
     }
+
+    totalAmount = Number(principal) + totalInterest;
 
     const newResult = {
       id: Date.now(),
-      principal: Number(principal),
-      rate: Number(rate),
+      principal,
+      rate,
+      totalDays,
       mode,
-      type,
+      interestType,
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       totalInterest: totalInterest.toFixed(2),
       totalAmount: totalAmount.toFixed(2),
-      duration: mode === "daily" ? `${diffDays} days` : `${months} months`,
     };
 
     setResults([newResult, ...results]);
   };
 
-  const deleteResult = (id) => {
-    setResults(results.filter((r) => r.id !== id));
-  };
+  return (
+    <div className="p-4 max-w-2xl mx-auto text-white">
+      <h1 className="text-2xl font-bold text-center mb-4">Gold Loan Interest Calculator</h1>
 
-  const Toggle = ({ label1, label2, value, setValue }) => (
-    <div className="flex items-center gap-2">
-      <span className={value === label1.toLowerCase() ? "text-yellow-400" : "text-gray-400"}>
-        {label1}
-      </span>
-      <div
-        onClick={() =>
-          setValue(value === label1.toLowerCase() ? label2.toLowerCase() : label1.toLowerCase())
-        }
-        className="w-12 h-6 bg-gray-700 rounded-full relative cursor-pointer transition-all duration-300"
-      >
-        <motion.div
-          className="absolute top-0.5 left-0.5 w-5 h-5 bg-yellow-400 rounded-full"
-          animate={{ x: value === label1.toLowerCase() ? 0 : 24 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      {/* Toggles */}
+      <div className="flex justify-center gap-6 mb-4">
+        {/* Mode Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Simple</span>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={mode === "Compound"}
+              onChange={() => setMode(mode === "Simple" ? "Compound" : "Simple")}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+          </label>
+          <span className="text-sm">Compound</span>
+        </div>
+
+        {/* Interest Type Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Monthly</span>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={interestType === "Daily"}
+              onChange={() =>
+                setInterestType(interestType === "Monthly" ? "Daily" : "Monthly")
+              }
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-yellow-500 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-500"></div>
+          </label>
+          <span className="text-sm">Daily</span>
+        </div>
+      </div>
+
+      {/* Inputs */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <input
+          type="number"
+          placeholder="Principal"
+          value={principal}
+          onChange={(e) => setPrincipal(e.target.value)}
+          className="p-2 bg-gray-800 rounded"
+        />
+        <input
+          type="number"
+          placeholder="Interest Rate (%)"
+          value={interestRate}
+          onChange={(e) => setInterestRate(e.target.value)}
+          className="p-2 bg-gray-800 rounded"
+        />
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="p-2 bg-gray-800 rounded col-span-1"
+        />
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="p-2 bg-gray-800 rounded col-span-1"
         />
       </div>
-      <span className={value === label2.toLowerCase() ? "text-yellow-400" : "text-gray-400"}>
-        {label2}
-      </span>
-    </div>
-  );
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white flex flex-col items-center py-10 px-4">
-      <motion.h1
-        className="text-3xl font-bold mb-6 flex items-center gap-2"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <button
+        onClick={calculateInterest}
+        className="w-full py-2 bg-yellow-500 text-black rounded font-bold hover:bg-yellow-400 transition"
       >
-        <Calculator className="text-yellow-400" /> Gold Loan Interest Calculator
-      </motion.h1>
+        Calculate
+      </button>
 
-      <div className="bg-gray-800/60 backdrop-blur-md p-6 rounded-2xl w-full max-w-md shadow-lg space-y-4">
-        <div className="flex gap-2">
-          <input
-            type="number"
-            placeholder="Principal (₹)"
-            className="w-1/2 p-2 rounded-lg bg-gray-700 text-white outline-none"
-            value={principal}
-            onChange={(e) => setPrincipal(e.target.value)}
-          />
-          <input
-            type="number"
-            placeholder="Interest %"
-            className="w-1/2 p-2 rounded-lg bg-gray-700 text-white outline-none"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-          />
-        </div>
-
-        <div className="flex gap-2 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="text-yellow-400" />
-            <input
-              type="date"
-              className="p-2 rounded-lg bg-gray-700 text-white outline-none"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <input
-              type="date"
-              className="p-2 rounded-lg bg-gray-700 text-white outline-none"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center mt-3">
-          <Toggle label1="Daily" label2="Monthly" value={mode} setValue={setMode} />
-          <Toggle label1="Simple" label2="Compound" value={type} setValue={setType} />
-        </div>
-
-        <motion.button
-          onClick={calculateInterest}
-          whileTap={{ scale: 0.9 }}
-          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded-xl transition-all"
-        >
-          Calculate
-        </motion.button>
-      </div>
-
-      <div className="mt-8 w-full max-w-md space-y-4">
-        {results.map((res) => (
-          <motion.div
-            key={res.id}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gray-800/70 backdrop-blur-md p-5 rounded-2xl shadow-lg"
+      {/* Results */}
+      <div className="mt-6 space-y-4">
+        {results.map((r) => (
+          <div
+            key={r.id}
+            className="bg-gray-900 p-4 rounded-lg shadow-lg border border-gray-700"
           >
-            <div className="flex justify-between items-center mb-2">
-              <h2 className="text-lg font-bold text-yellow-400">
-                ₹{res.principal} @ {res.rate}%
-              </h2>
-              <button
-                onClick={() => deleteResult(res.id)}
-                className="text-red-400 hover:text-red-500"
-              >
-                <Trash2 size={18} />
-              </button>
+            <div className="flex justify-between text-sm mb-2">
+              <span>Start: {r.startDate}</span>
+              <span>End: {r.endDate}</span>
             </div>
-            <p>
-              <strong>Mode:</strong> {res.mode} ({res.duration})
+            <p>Principal: ₹{r.principal}</p>
+            <p>Rate: {r.rate}% ({r.interestType})</p>
+            <p>Mode: {r.mode}</p>
+            <p>Days: {r.totalDays}</p>
+            <p className="text-yellow-400 font-semibold">
+              Interest: ₹{r.totalInterest}
             </p>
-            <p>
-              <strong>Type:</strong> {res.type}
+            <p className="text-green-400 font-bold">
+              Total: ₹{r.totalAmount}
             </p>
-            <p>
-              <strong>Start:</strong> {res.startDate}
-            </p>
-            <p>
-              <strong>End:</strong> {res.endDate}
-            </p>
-            <p>
-              <strong>Interest:</strong> ₹{res.totalInterest}
-            </p>
-            <p>
-              <strong>Total:</strong> ₹{res.totalAmount}
-            </p>
-          </motion.div>
+          </div>
         ))}
       </div>
     </div>

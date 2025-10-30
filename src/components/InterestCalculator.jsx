@@ -2,14 +2,13 @@ import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2 } from "lucide-react";
 
-/** 
- * FINAL STABLE VERSION (UI same as your perfect one)
- * - Dark-gold animated theme
- * - Inclusive days counting
- * - Monthly half-month rules
- * - Daily & Monthly compound
- * - Monthly compounding every 12 months
- * - Date format dd-mm-yyyy
+/**
+ * FINAL VERSION with "Paid / Not Paid" for Monthly Mode
+ * - Dark-Gold Animated UI
+ * - Inclusive day count
+ * - Monthly half-month logic
+ * - Compound interest every 12 months or 365 days
+ * - If "Paid" → subtract first month interest
  */
 
 export default function InterestCalculator() {
@@ -19,6 +18,7 @@ export default function InterestCalculator() {
   const [endDate, setEndDate] = useState("");
   const [mode, setMode] = useState("monthly");
   const [interestType, setInterestType] = useState("simple");
+  const [paidStatus, setPaidStatus] = useState("not_paid");
   const [results, setResults] = useState([]);
 
   useEffect(() => {
@@ -107,6 +107,7 @@ export default function InterestCalculator() {
     let total = 0;
     let extra = {};
 
+    // ---------------- SIMPLE INTEREST ----------------
     if (interestType === "simple") {
       if (mode === "daily") {
         const dailyRate = rMonthly / 30 / 100;
@@ -122,9 +123,18 @@ export default function InterestCalculator() {
         } else {
           interest = P * (rMonthly / 100) * monthsInfo.monthsCount;
         }
+
+        // 🟢 Subtract first month if "Paid"
+        if (paidStatus === "paid" && monthsInfo.monthsCount >= 1) {
+          const firstMonthInterest = P * (rMonthly / 100);
+          interest -= firstMonthInterest;
+        }
+
         total = P + interest;
         extra = monthsInfo;
       }
+
+      // ---------------- COMPOUND INTEREST ----------------
     } else {
       if (mode === "daily") {
         const dailyRate = rMonthly / 30 / 100;
@@ -159,6 +169,13 @@ export default function InterestCalculator() {
           totalInterestAccum += remInterest;
         }
         interest = totalInterestAccum;
+
+        // 🟢 Subtract first month if "Paid"
+        if (paidStatus === "paid" && monthsInfo.monthsCount >= 1) {
+          const firstMonthInterest = P * (rMonthly / 100);
+          interest -= firstMonthInterest;
+        }
+
         total = P + interest;
         extra = monthsInfo;
       }
@@ -172,6 +189,7 @@ export default function InterestCalculator() {
       endDate,
       mode,
       interestType,
+      paidStatus,
       interest: round(interest),
       total: round(total),
       ...extra,
@@ -202,22 +220,12 @@ export default function InterestCalculator() {
   return (
     <div style={{ minHeight: "100vh" }} className="flex items-start justify-center p-4">
       <style>{`
-        .gold-shimmer {
-          background: linear-gradient(180deg, #070707 0%, #0d0d0d 40%);
-          position: relative;
-          overflow: hidden;
-        }
+        .gold-shimmer { background: linear-gradient(180deg, #070707 0%, #0d0d0d 40%); position: relative; overflow: hidden; }
         .gold-shimmer::before {
-          content: "";
-          position: absolute;
-          left: -40%;
-          top: -30%;
-          width: 180%;
-          height: 160%;
-          background: radial-gradient(50% 50% at 50% 50%, rgba(255,208,96,0.06), rgba(255,209,96,0.02) 20%, transparent 40%), linear-gradient(90deg, rgba(255,215,64,0.02), rgba(255,215,64,0.04), rgba(255,215,64,0.02));
-          transform: rotate(-25deg);
-          animation: shimmerMove 9s linear infinite;
-          pointer-events: none;
+          content: ""; position: absolute; left: -40%; top: -30%; width: 180%; height: 160%;
+          background: radial-gradient(50% 50% at 50% 50%, rgba(255,208,96,0.06), rgba(255,209,96,0.02) 20%, transparent 40%),
+          linear-gradient(90deg, rgba(255,215,64,0.02), rgba(255,215,64,0.04), rgba(255,215,64,0.02));
+          transform: rotate(-25deg); animation: shimmerMove 9s linear infinite; pointer-events: none;
         }
         @keyframes shimmerMove {
           0% { transform: translateX(-100%) rotate(-25deg); opacity: 0.7; }
@@ -225,10 +233,7 @@ export default function InterestCalculator() {
           100% { transform: translateX(100%) rotate(-25deg); opacity: 0.7; }
         }
         .btn-gold { background: #ffd400; color: #000; font-weight: 700; }
-        .card-glow:hover {
-          box-shadow: 0 10px 30px rgba(255, 208, 96, 0.06), 0 2px 8px rgba(0,0,0,0.6);
-          transform: translateY(-4px);
-        }
+        .card-glow:hover { box-shadow: 0 10px 30px rgba(255, 208, 96, 0.06), 0 2px 8px rgba(0,0,0,0.6); transform: translateY(-4px); }
         .gold-text { color: #FFD700; }
         .panel { background: #121212; border: 1px solid rgba(255,215,64,0.06); }
         .input-dark { background: #141414; color: #fff; border: 1px solid rgba(255,255,255,0.04); }
@@ -244,7 +249,7 @@ export default function InterestCalculator() {
             </div>
           </div>
 
-          {/* form inputs */}
+          {/* Form */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 panel rounded-2xl p-4">
             <div className="flex flex-col">
               <label className="text-sm text-gray-300 mb-1">Principal (₹)</label>
@@ -266,6 +271,7 @@ export default function InterestCalculator() {
               <input className="p-3 rounded input-dark" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
             </div>
 
+            {/* Mode */}
             <div className="flex items-center gap-3 mt-2">
               <label className="text-sm text-gray-300">Mode</label>
               <select className="p-2 rounded input-dark" value={mode} onChange={(e) => setMode(e.target.value)}>
@@ -274,6 +280,18 @@ export default function InterestCalculator() {
               </select>
             </div>
 
+            {/* Paid Status - visible only if monthly */}
+            {mode === "monthly" && (
+              <div className="flex items-center gap-3 mt-2">
+                <label className="text-sm text-gray-300">Paid Status</label>
+                <select className="p-2 rounded input-dark" value={paidStatus} onChange={(e) => setPaidStatus(e.target.value)}>
+                  <option value="not_paid">Not Paid</option>
+                  <option value="paid">Paid</option>
+                </select>
+              </div>
+            )}
+
+            {/* Interest */}
             <div className="flex items-center gap-3 mt-2">
               <label className="text-sm text-gray-300">Interest</label>
               <select className="p-2 rounded input-dark" value={interestType} onChange={(e) => setInterestType(e.target.value)}>
@@ -290,7 +308,7 @@ export default function InterestCalculator() {
           </div>
         </motion.div>
 
-        {/* results */}
+        {/* Results */}
         <div className="mt-6">
           <AnimatePresence>
             {results.map((r, idx) => (
@@ -298,7 +316,7 @@ export default function InterestCalculator() {
                 <div className="flex justify-between items-start">
                   <div>
                     <div className="text-lg font-semibold gold-text">₹{r.principal} @ {r.monthlyRate}%</div>
-                    <div className="text-sm text-gray-400">{r.interestType} • {r.mode}</div>
+                    <div className="text-sm text-gray-400">{r.interestType} • {r.mode} • {r.mode === "monthly" ? r.paidStatus : ""}</div>
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <button onClick={() => deleteEntry(r.id)} className="text-red-400 hover:text-red-500">
@@ -308,7 +326,7 @@ export default function InterestCalculator() {
                   </div>
                 </div>
 
-                {/* date + days/months */}
+                {/* Date Info */}
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                   <div className="p-2 rounded bg-[#0f0f0f]">
                     <div className="text-gray-300 text-xs">Start</div>

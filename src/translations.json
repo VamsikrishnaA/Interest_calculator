@@ -1,0 +1,36 @@
+{
+  "en": {
+    "title": "Gold Loan Interest Calculator",
+    "principal": "Principal Amount",
+    "rate": "Interest Rate (%)",
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "interestType": "Interest Type",
+    "simple": "Simple",
+    "compound": "Compound",
+    "status": "Status",
+    "paid": "Paid",
+    "unpaid": "Unpaid",
+    "calculate": "Calculate",
+    "total": "Total Amount",
+    "interest": "Interest Amount",
+    "days": "Number of Days"
+  },
+  "te": {
+    "title": "బంగారు లోన్ వడ్డీ లెక్కింపు",
+    "principal": "మూలధనం మొత్తం",
+    "rate": "వడ్డీ రేటు (%)",
+    "startDate": "ప్రారంభ తేదీ",
+    "endDate": "ముగింపు తేదీ",
+    "interestType": "వడ్డీ రకం",
+    "simple": "సాధ వడ్డీ",
+    "compound": "సంక్లిష్ట వడ్డీ",
+    "status": "స్థితి",
+    "paid": "చెల్లించబడింది",
+    "unpaid": "చెల్లించబడలేదు",
+    "calculate": "లెక్కించు",
+    "total": "మొత్తం మొత్తం",
+    "interest": "వడ్డీ మొత్తం",
+    "days": "రోజుల సంఖ్య"
+  }
+}

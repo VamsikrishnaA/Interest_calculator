@@ -9,6 +9,7 @@ import { Trash2, Globe } from "lucide-react";
  * - Uses translations JSON in public/translations.json
  * - Falls back to built-in translations if fetch fails
  * - Persists chosen language in localStorage ('goldcalc_lang')
+* working with telugu toggle
  * - Keeps your dark-gold UI & calculation logic
  */
 

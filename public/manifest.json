@@ -1,11 +1,11 @@
 {
   "name": "Gold Loan Interest Calculator",
   "short_name": "GoldCalc",
-  "description": "Gold loan interest calculator — monthly & daily, simple & compound.",
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#3B2D00",
-  "background_color": "#0b0b0b",
+  "background_color": "#000000",
+  "theme_color": "#FFD700",
+  "orientation": "portrait",
   "icons": [
     {
       "src": "/icons/icon-192.png",

@@ -1,15 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trash2 } from "lucide-react";
-
-/**
- * FINAL VERSION with "Paid / Not Paid" for Monthly Mode
- * - Dark-Gold Animated UI
- * - Inclusive day count
- * - Monthly half-month logic
- * - Compound interest every 12 months or 365 days
- * - If "Paid" → subtract first month interest
- */
+import { Trash2, Globe } from "lucide-react";
 
 export default function InterestCalculator() {
   const [principal, setPrincipal] = useState("");
@@ -20,6 +11,56 @@ export default function InterestCalculator() {
   const [interestType, setInterestType] = useState("simple");
   const [paidStatus, setPaidStatus] = useState("not_paid");
   const [results, setResults] = useState([]);
+  const [lang, setLang] = useState("en");
+
+  // language dictionary
+  const t = (key) => {
+    const dict = {
+      en: {
+        title: "Gold Loan Interest Calculator",
+        principal: "Principal (₹)",
+        rate: "Monthly Rate (%)",
+        start: "Start Date",
+        end: "End Date",
+        mode: "Mode",
+        paid: "Paid Status",
+        interest: "Interest Type",
+        calc: "Calculate",
+        not_paid: "Not Paid",
+        paid_status: "Paid",
+        monthly: "Monthly",
+        daily: "Daily",
+        simple: "Simple",
+        compound: "Compound",
+        interest_label: "Interest",
+        total_label: "Total (P+I)",
+        months: "Months (incl.)",
+        days: "Days (incl.)",
+      },
+      te: {
+        title: "బంగారు లోన్ వడ్డీ లెక్కింపు",
+        principal: "మూలధనం (₹)",
+        rate: "మాస వడ్డీ (%)",
+        start: "ప్రారంభ తేది",
+        end: "ముగింపు తేది",
+        mode: "మోడ్",
+        paid: "చెల్లింపు స్థితి",
+        interest: "వడ్డీ రకం",
+        calc: "లెక్కించు",
+        not_paid: "చెల్లించలేదు",
+        paid_status: "చెల్లించబడింది",
+        monthly: "మాసవారీ",
+        daily: "దినవారీ",
+        simple: "సాధారణ",
+        compound: "సంక్లిష్ట",
+        interest_label: "వడ్డీ",
+        total_label: "మొత్తం (మూలధనం + వడ్డీ)",
+        months: "మాసాలు (సహా)",
+        days: "రోజులు (సహా)",
+      },
+    };
+    return dict[lang][key] || key;
+  };
 
   useEffect(() => {
     try {
@@ -107,7 +148,6 @@ export default function InterestCalculator() {
     let total = 0;
     let extra = {};
 
-    // ---------------- SIMPLE INTEREST ----------------
     if (interestType === "simple") {
       if (mode === "daily") {
         const dailyRate = rMonthly / 30 / 100;
@@ -124,7 +164,6 @@ export default function InterestCalculator() {
           interest = P * (rMonthly / 100) * monthsInfo.monthsCount;
         }
 
-        // 🟢 Subtract first month if "Paid"
         if (paidStatus === "paid" && monthsInfo.monthsCount >= 1) {
           const firstMonthInterest = P * (rMonthly / 100);
           interest -= firstMonthInterest;
@@ -133,8 +172,6 @@ export default function InterestCalculator() {
         total = P + interest;
         extra = monthsInfo;
       }
-
-      // ---------------- COMPOUND INTEREST ----------------
     } else {
       if (mode === "daily") {
         const dailyRate = rMonthly / 30 / 100;
@@ -170,7 +207,6 @@ export default function InterestCalculator() {
         }
         interest = totalInterestAccum;
 
-        // 🟢 Subtract first month if "Paid"
         if (paidStatus === "paid" && monthsInfo.monthsCount >= 1) {
           const firstMonthInterest = P * (rMonthly / 100);
           interest -= firstMonthInterest;
@@ -202,23 +238,8 @@ export default function InterestCalculator() {
     setResults((prev) => prev.filter((r) => r.id !== id));
   }
 
-  const formVariant = {
-    hidden: { opacity: 0, y: -18 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
-  };
-  const cardVariant = (i) => ({
-    hidden: { opacity: 0, y: 18, scale: 0.98 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { delay: i * 0.07, type: "spring", stiffness: 120, damping: 14 },
-    },
-    exit: { opacity: 0, y: -12, transition: { duration: 0.25 } },
-  });
-
   return (
-    <div style={{ minHeight: "100vh" }} className="flex items-start justify-center p-4">
+    <div className="flex items-start justify-center p-4 min-h-screen">
       <style>{`
         .gold-shimmer { background: linear-gradient(180deg, #070707 0%, #0d0d0d 40%); position: relative; overflow: hidden; }
         .gold-shimmer::before {
@@ -233,135 +254,121 @@ export default function InterestCalculator() {
           100% { transform: translateX(100%) rotate(-25deg); opacity: 0.7; }
         }
         .btn-gold { background: #ffd400; color: #000; font-weight: 700; }
-        .card-glow:hover { box-shadow: 0 10px 30px rgba(255, 208, 96, 0.06), 0 2px 8px rgba(0,0,0,0.6); transform: translateY(-4px); }
-        .gold-text { color: #FFD700; }
-        .panel { background: #121212; border: 1px solid rgba(255,215,64,0.06); }
         .input-dark { background: #141414; color: #fff; border: 1px solid rgba(255,255,255,0.04); }
+        .gold-text { color: #FFD700; }
       `}</style>
 
-      <div className="w-full max-w-3xl gold-shimmer rounded-2xl p-6">
-        <motion.div variants={formVariant} initial="hidden" animate="visible">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold gold-text">Gold Loan Interest Calculator</h1>
-            <div className="text-right text-xs text-gray-400">
-              <div>Mode: {mode}</div>
-              <div>Type: {interestType}</div>
-            </div>
+      <div className="w-full max-w-3xl gold-shimmer rounded-2xl p-6 relative">
+        {/* Language Toggle */}
+        <button
+          onClick={() => setLang(lang === "en" ? "te" : "en")}
+          className="absolute top-4 right-4 text-gray-300 hover:text-yellow-400 transition"
+        >
+          <Globe size={20} />
+        </button>
+
+        <h1 className="text-2xl font-bold gold-text mb-4">{t("title")}</h1>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm text-gray-300">{t("principal")}</label>
+            <input className="input-dark w-full p-2 rounded" type="number" value={principal} onChange={(e) => setPrincipal(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm text-gray-300">{t("rate")}</label>
+            <input className="input-dark w-full p-2 rounded" type="number" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm text-gray-300">{t("start")}</label>
+            <input className="input-dark w-full p-2 rounded" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-sm text-gray-300">{t("end")}</label>
+            <input className="input-dark w-full p-2 rounded" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
 
-          {/* Form */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 panel rounded-2xl p-4">
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">Principal (₹)</label>
-              <input className="p-3 rounded input-dark" type="number" value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="e.g., 70000" />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">Monthly Rate (%)</label>
-              <input className="p-3 rounded input-dark" type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="e.g., 2.1" />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">Start Date</label>
-              <input className="p-3 rounded input-dark" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            </div>
-
-            <div className="flex flex-col">
-              <label className="text-sm text-gray-300 mb-1">End Date</label>
-              <input className="p-3 rounded input-dark" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            </div>
-
-            {/* Mode */}
-            <div className="flex items-center gap-3 mt-2">
-              <label className="text-sm text-gray-300">Mode</label>
-              <select className="p-2 rounded input-dark" value={mode} onChange={(e) => setMode(e.target.value)}>
-                <option value="monthly">Monthly</option>
-                <option value="daily">Daily</option>
-              </select>
-            </div>
-
-            {/* Paid Status - visible only if monthly */}
-            {mode === "monthly" && (
-              <div className="flex items-center gap-3 mt-2">
-                <label className="text-sm text-gray-300">Paid Status</label>
-                <select className="p-2 rounded input-dark" value={paidStatus} onChange={(e) => setPaidStatus(e.target.value)}>
-                  <option value="not_paid">Not Paid</option>
-                  <option value="paid">Paid</option>
-                </select>
-              </div>
-            )}
-
-            {/* Interest */}
-            <div className="flex items-center gap-3 mt-2">
-              <label className="text-sm text-gray-300">Interest</label>
-              <select className="p-2 rounded input-dark" value={interestType} onChange={(e) => setInterestType(e.target.value)}>
-                <option value="simple">Simple</option>
-                <option value="compound">Compound</option>
-              </select>
-            </div>
-
-            <div className="md:col-span-2 flex justify-end mt-2">
-              <motion.button whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.02 }} className="btn-gold px-5 py-2 rounded-lg font-semibold" onClick={calculate}>
-                Calculate
-              </motion.button>
-            </div>
+          <div>
+            <label className="text-sm text-gray-300">{t("mode")}</label>
+            <select className="input-dark w-full p-2 rounded" value={mode} onChange={(e) => setMode(e.target.value)}>
+              <option value="monthly">{t("monthly")}</option>
+              <option value="daily">{t("daily")}</option>
+            </select>
           </div>
-        </motion.div>
+
+          {mode === "monthly" && (
+            <div>
+              <label className="text-sm text-gray-300">{t("paid")}</label>
+              <select className="input-dark w-full p-2 rounded" value={paidStatus} onChange={(e) => setPaidStatus(e.target.value)}>
+                <option value="not_paid">{t("not_paid")}</option>
+                <option value="paid">{t("paid_status")}</option>
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="text-sm text-gray-300">{t("interest")}</label>
+            <select className="input-dark w-full p-2 rounded" value={interestType} onChange={(e) => setInterestType(e.target.value)}>
+              <option value="simple">{t("simple")}</option>
+              <option value="compound">{t("compound")}</option>
+            </select>
+          </div>
+
+          <div className="md:col-span-2 text-right">
+            <button className="btn-gold px-4 py-2 rounded mt-2" onClick={calculate}>
+              {t("calc")}
+            </button>
+          </div>
+        </div>
 
         {/* Results */}
         <div className="mt-6">
           <AnimatePresence>
-            {results.map((r, idx) => (
-              <motion.div key={r.id} initial="hidden" animate="visible" exit="exit" variants={cardVariant(idx)} className="card-glow panel rounded-xl p-4 mt-4" layout>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="text-lg font-semibold gold-text">₹{r.principal} @ {r.monthlyRate}%</div>
-                    <div className="text-sm text-gray-400">{r.interestType} • {r.mode} • {r.mode === "monthly" ? r.paidStatus : ""}</div>
+            {results.map((r) => (
+              <motion.div
+                key={r.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[#111] border border-[#222] rounded-xl p-4 mt-4"
+              >
+                <div className="flex justify-between">
+                  <div className="gold-text font-semibold">
+                    ₹{r.principal} @ {r.monthlyRate}%
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <button onClick={() => deleteEntry(r.id)} className="text-red-400 hover:text-red-500">
-                      <Trash2 size={18} />
-                    </button>
-                    <div className="text-xs text-gray-400">{new Date(r.id).toLocaleString()}</div>
+                  <button onClick={() => deleteEntry(r.id)} className="text-red-400 hover:text-red-500">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                <div className="text-sm text-gray-400 mt-1">
+                  {t(r.interestType)} • {t(r.mode)} • {r.mode === "monthly" ? t(r.paidStatus) : ""}
+                </div>
+
+                <div className="grid grid-cols-3 text-sm mt-2">
+                  <div>
+                    <div className="text-gray-400 text-xs">{t("start")}</div>
+                    <div>{r.startDate}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400 text-xs">{t("end")}</div>
+                    <div>{r.endDate}</div>
+                  </div>
+                  <div>
+                    <div className="text-gray-400 text-xs">
+                      {r.mode === "daily" ? t("days") : t("months")}
+                    </div>
+                    <div>{r.mode === "daily" ? r.totalInclusive : r.monthsCount}</div>
                   </div>
                 </div>
 
-                {/* Date Info */}
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  <div className="p-2 rounded bg-[#0f0f0f]">
-                    <div className="text-gray-300 text-xs">Start</div>
-                    <div className="text-white">
-                      {(() => {
-                        const d = new Date(r.startDate);
-                        return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="p-2 rounded bg-[#0f0f0f]">
-                    <div className="text-gray-300 text-xs">End</div>
-                    <div className="text-white">
-                      {(() => {
-                        const d = new Date(r.endDate);
-                        return `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="p-2 rounded bg-[#0f0f0f]">
-                    <div className="text-gray-300 text-xs">{r.mode === "daily" ? "Days (incl.)" : "Months (incl.)"}</div>
-                    <div className="text-white">{r.mode === "daily" ? r.totalInclusive ?? r.totalDays : r.monthsCount ?? r.totalMonths}</div>
-                  </div>
-                </div>
-
-                <div className="mt-3 flex items-center justify-between">
+                <div className="flex justify-between items-center mt-3">
                   <div>
-                    <div className="text-sm text-gray-300">Interest</div>
-                    <div className="text-lg font-semibold text-green-300">₹{r.interest}</div>
+                    <div className="text-gray-400 text-xs">{t("interest_label")}</div>
+                    <div className="text-green-300 font-semibold">₹{r.interest}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm text-gray-300">Total (P+I)</div>
-                    <div className="text-lg font-semibold gold-text">₹{r.total}</div>
+                    <div className="text-gray-400 text-xs">{t("total_label")}</div>
+                    <div className="gold-text font-semibold">₹{r.total}</div>
                   </div>
                 </div>
               </motion.div>

@@ -1,6 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Trash2, Globe } from "lucide-react";
+
+/**
+ * InterestCalculator (loads translations from /translations.json)
+ * Paste as: src/components/InterestCalculator.jsx
+ *
+ * - Uses translations JSON in public/translations.json
+ * - Falls back to built-in translations if fetch fails
+ * - Persists chosen language in localStorage ('goldcalc_lang')
+ * - Keeps your dark-gold UI & calculation logic
+ */
 
 export default function InterestCalculator() {
   const [principal, setPrincipal] = useState("");
@@ -11,10 +21,14 @@ export default function InterestCalculator() {
   const [interestType, setInterestType] = useState("simple");
   const [paidStatus, setPaidStatus] = useState("not_paid");
   const [results, setResults] = useState([]);
-  const [lang, setLang] = useState("en");
 
-  // Translation dictionary
-  const dict = {
+  // translations loaded from /translations.json (public)
+  const [translations, setTranslations] = useState(null);
+  // language code: 'en' | 'te'
+  const [lang, setLang] = useState(() => localStorage.getItem("goldcalc_lang") || "en");
+
+  // fallback translations (if fetch fails)
+  const FALLBACK = {
     en: {
       title: "Gold Loan Interest Calculator",
       principal: "Principal (₹)",
@@ -32,7 +46,7 @@ export default function InterestCalculator() {
       days_incl: "Days (incl.)",
       months_incl: "Months (incl.)",
       interest_label: "Interest",
-      total_label: "Total (P + I)",
+      total_label: "Total (P+I)",
       monthly: "Monthly",
       daily: "Daily",
     },
@@ -58,310 +72,392 @@ export default function InterestCalculator() {
       daily: "దినవారీ",
     },
   };
-  const t = (k) => dict[lang][k] ?? k;
 
-  // History save/load
+  // t(key) -> translation for current language (safe fallback)
+  function t(key) {
+    const src = translations || FALLBACK;
+    return (src[lang] && src[lang][key]) || (FALLBACK[lang] && FALLBACK[lang][key]) || key;
+  }
+
+  // load translations.json from public folder
   useEffect(() => {
-    const raw = localStorage.getItem("goldcalc_history");
-    if (raw) setResults(JSON.parse(raw));
+    let mounted = true;
+    fetch("/translations.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("no translations file");
+        return res.json();
+      })
+      .then((data) => {
+        if (mounted) setTranslations(data);
+      })
+      .catch(() => {
+        // fallback kept
+        setTranslations(null);
+      });
+    return () => {
+      mounted = false;
+    };
   }, []);
+
+  // persist language preference
   useEffect(() => {
-    localStorage.setItem("goldcalc_history", JSON.stringify(results));
+    localStorage.setItem("goldcalc_lang", lang);
+  }, [lang]);
+
+  // load history
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("goldcalc_history");
+      if (raw) setResults(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // save history
+  useEffect(() => {
+    try {
+      localStorage.setItem("goldcalc_history", JSON.stringify(results));
+    } catch {}
   }, [results]);
 
-  // Helpers
-  const inclusiveDays = (s, e) => {
-    const start = new Date(s);
-    const end = new Date(e);
-    return Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1;
-  };
-  const round = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
-  const formatDate = (iso) => {
-    const d = new Date(iso);
-    return `${String(d.getDate()).padStart(2, "0")}-${String(
-      d.getMonth() + 1
-    ).padStart(2, "0")}-${d.getFullYear()}`;
-  };
+  // helpers
+  function inclusiveDaysBetween(startISO, endISO) {
+    const s = new Date(startISO + "T00:00:00");
+    const e = new Date(endISO + "T00:00:00");
+    return Math.floor((e - s) / (1000 * 60 * 60 * 24)) + 1;
+  }
 
-  // Month counting logic (your custom rule)
-  const getMonthsCount = (start, end) => {
-    const s = new Date(start);
-    const e = new Date(end);
-    let months = 0;
-    let temp = new Date(s);
+  function getMonthsCount(startISO, endISO) {
+    const start = new Date(startISO + "T00:00:00");
+    const end = new Date(endISO + "T00:00:00");
+    if (end < start) return { error: "invalid-range" };
+
+    function addOneMonth(d) {
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const day = d.getDate();
+      const next = new Date(y, m + 1, day);
+      if (next.getDate() !== day) next.setDate(0); // clamp
+      return next;
+    }
+
+    let cursor = new Date(start.getTime());
+    let fullMonths = 0;
     while (true) {
-      const next = new Date(temp);
-      next.setMonth(next.getMonth() + 1);
-      if (next <= e) {
-        months++;
-        temp = next;
+      const nx = addOneMonth(cursor);
+      if (nx <= end) {
+        fullMonths += 1;
+        cursor = nx;
       } else break;
     }
-    const totalDays = inclusiveDays(start, end);
-    const covered = inclusiveDays(start, temp.toISOString().split("T")[0]);
-    const remaining = totalDays - covered;
-    let monthsCount = months;
-    if (remaining < 6) monthsCount += 0;
-    else if (remaining <= 16) monthsCount += 0.5;
-    else monthsCount += 1;
-    return { monthsCount, totalDays };
-  };
 
-  // Main calculation
-  const calculate = () => {
-    if (!principal || !monthlyRate || !startDate || !endDate) return;
-    const P = Number(principal);
-    const r = Number(monthlyRate);
-    const { monthsCount, totalDays } = getMonthsCount(startDate, endDate);
-    let interest = 0,
-      total = 0;
+    const daysCovered = Math.floor((cursor - start) / (1000 * 60 * 60 * 24));
+    const totalInclusive = inclusiveDaysBetween(startISO, endISO);
+    const remainingDays = totalInclusive - daysCovered;
 
-    if (interestType === "simple") {
-      if (mode === "daily") {
-        const dRate = r / 30 / 100;
-        interest = P * dRate * totalDays;
-      } else {
-        interest = P * (r / 100) * monthsCount;
-      }
-      if (paidStatus === "paid" && mode === "monthly" && monthsCount >= 1)
-        interest -= P * (r / 100);
-      total = P + interest;
+    let monthsCount = fullMonths;
+    let partialRule = "days";
+    if (remainingDays < 6) partialRule = "days";
+    else if (remainingDays >= 6 && remainingDays <= 16) {
+      monthsCount += 0.5;
+      partialRule = "half";
     } else {
-      if (mode === "daily") {
-        const dRate = r / 30 / 100;
-        let rem = totalDays,
-          curP = P,
-          totInt = 0;
-        while (rem >= 365) {
-          const block = curP * dRate * 365;
-          totInt += block;
-          curP += block;
-          rem -= 365;
-        }
-        if (rem > 0) totInt += curP * dRate * rem;
-        interest = totInt;
-      } else {
-        let rem = monthsCount,
-          curP = P,
-          totInt = 0;
-        while (rem >= 12) {
-          const block = curP * (r / 100) * 12;
-          totInt += block;
-          curP += block;
-          rem -= 12;
-        }
-        if (rem > 0) totInt += curP * (r / 100) * rem;
-        interest = totInt;
-      }
-      if (paidStatus === "paid" && mode === "monthly" && monthsCount >= 1)
-        interest -= P * (r / 100);
-      total = P + interest;
+      monthsCount += 1;
+      partialRule = "full";
     }
 
-    setResults((prev) => [
-      {
-        id: Date.now(),
-        principal: round(P),
-        monthlyRate: r,
-        startDate,
-        endDate,
-        mode,
-        interestType,
-        paidStatus,
-        interest: round(interest),
-        total: round(total),
-        monthsCount,
-        totalDays,
-      },
-      ...prev,
-    ]);
-  };
+    return { fullMonths, remainingDays, totalInclusive, monthsCount, partialRule };
+  }
 
-  const del = (id) => setResults((p) => p.filter((x) => x.id !== id));
+  function round(n, digits = 2) {
+    const m = Math.pow(10, digits);
+    return Math.round(n * m) / m;
+  }
 
-  const formAnim = {
-    hidden: { opacity: 0, y: -15 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } },
+  function formatDDMMYYYY(iso) {
+    if (!iso) return "";
+    const d = new Date(iso + "T00:00:00");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
+  function calculate() {
+    if (!principal || !monthlyRate || !startDate || !endDate) {
+      alert(t("Please fill all fields") || "Please fill all fields");
+      return;
+    }
+
+    const P = Number(principal);
+    const rMonthly = Number(monthlyRate);
+    if (isNaN(P) || P <= 0 || isNaN(rMonthly) || rMonthly <= 0) {
+      alert(t("Enter valid inputs") || "Enter valid inputs");
+      return;
+    }
+
+    const totalDays = inclusiveDaysBetween(startDate, endDate);
+    const monthsInfo = getMonthsCount(startDate, endDate);
+
+    let interest = 0;
+    let total = 0;
+    let extra = {};
+
+    // SIMPLE
+    if (interestType === "simple") {
+      if (mode === "daily") {
+        const dailyRate = rMonthly / 30 / 100;
+        interest = P * dailyRate * totalDays;
+        total = P + interest;
+        extra = { totalDays };
+      } else {
+        if (monthsInfo.partialRule === "days") {
+          const dailyRate = rMonthly / 30 / 100;
+          const dayInterest = P * dailyRate * monthsInfo.remainingDays;
+          const monthsInterest = P * (rMonthly / 100) * monthsInfo.fullMonths;
+          interest = monthsInterest + dayInterest;
+        } else {
+          interest = P * (rMonthly / 100) * monthsInfo.monthsCount;
+        }
+
+        // subtract first month interest if paid
+        if (paidStatus === "paid" && monthsInfo.monthsCount >= 1) {
+          const firstMonthInterest = P * (rMonthly / 100);
+          interest -= firstMonthInterest;
+        }
+
+        total = P + interest;
+        extra = monthsInfo;
+      }
+    } else {
+      // COMPOUND
+      if (mode === "daily") {
+        const dailyRate = rMonthly / 30 / 100;
+        let remaining = totalDays;
+        let currentPrincipal = P;
+        let totalInterestAccum = 0;
+        while (remaining >= 365) {
+          const blockInterest = currentPrincipal * dailyRate * 365;
+          totalInterestAccum += blockInterest;
+          currentPrincipal += blockInterest;
+          remaining -= 365;
+        }
+        if (remaining > 0) {
+          const remInterest = currentPrincipal * dailyRate * remaining;
+          totalInterestAccum += remInterest;
+        }
+        interest = totalInterestAccum;
+        total = P + interest;
+        extra = { totalDays };
+      } else {
+        let monthsRemaining = monthsInfo.monthsCount;
+        let currentPrincipal = P;
+        let totalInterestAccum = 0;
+        while (monthsRemaining >= 12) {
+          const blockInterest = currentPrincipal * (rMonthly / 100) * 12;
+          totalInterestAccum += blockInterest;
+          currentPrincipal += blockInterest;
+          monthsRemaining -= 12;
+        }
+        if (monthsRemaining > 0) {
+          const remInterest = currentPrincipal * (rMonthly / 100) * monthsRemaining;
+          totalInterestAccum += remInterest;
+        }
+        interest = totalInterestAccum;
+
+        // subtract first month interest if paid
+        if (paidStatus === "paid" && monthsInfo.monthsCount >= 1) {
+          const firstMonthInterest = P * (rMonthly / 100);
+          interest -= firstMonthInterest;
+        }
+
+        total = P + interest;
+        extra = monthsInfo;
+      }
+    }
+
+    const entry = {
+      id: Date.now(),
+      principal: round(P),
+      monthlyRate: rMonthly,
+      startDate,
+      endDate,
+      mode,
+      interestType,
+      paidStatus,
+      interest: round(interest),
+      total: round(total),
+      ...extra,
+    };
+
+    setResults((prev) => [entry, ...prev]);
+  }
+
+  function deleteEntry(id) {
+    setResults((prev) => prev.filter((r) => r.id !== id));
+  }
+
+  // small animation variants
+  const formVariant = {
+    hidden: { opacity: 0, y: -18 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.45 } },
   };
-  const cardAnim = (i) => ({
-    hidden: { opacity: 0, y: 15 },
+  const cardVariant = (i) => ({
+    hidden: { opacity: 0, y: 18, scale: 0.98 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { delay: i * 0.05, type: "spring", stiffness: 120 },
+      scale: 1,
+      transition: { delay: i * 0.07, type: "spring", stiffness: 120, damping: 14 },
     },
-    exit: { opacity: 0, y: -10, transition: { duration: 0.25 } },
+    exit: { opacity: 0, y: -12, transition: { duration: 0.25 } },
   });
 
   return (
-    <div className="min-h-screen flex justify-center items-start p-4 bg-[#0a0a0a] text-white">
+    <div style={{ minHeight: "100vh" }} className="flex items-start justify-center p-4">
       <style>{`
-        .panel { background:#121212; border:1px solid rgba(255,215,64,0.05);}
-        .input-dark {background:#141414;border:1px solid rgba(255,255,255,0.1);color:#fff;}
-        .btn-gold {background:#ffd400;color:#000;font-weight:700;}
-        .btn-gold:hover {filter:brightness(0.95);}
-        .gold-text{color:#ffd700;}
+        .gold-shimmer { background: linear-gradient(180deg, #070707 0%, #0d0d0d 40%); position: relative; overflow: hidden; }
+        .gold-shimmer::before {
+          content: "";
+          position: absolute;
+          left: -40%; top: -30%;
+          width: 180%; height: 160%;
+          background: radial-gradient(50% 50% at 50% 50%, rgba(255,208,96,0.06), rgba(255,209,96,0.02) 20%, transparent 40%),
+          linear-gradient(90deg, rgba(255,215,64,0.02), rgba(255,215,64,0.04), rgba(255,215,64,0.02));
+          transform: rotate(-25deg);
+          animation: shimmerMove 9s linear infinite;
+          pointer-events: none;
+        }
+        @keyframes shimmerMove { 0% { transform: translateX(-100%) rotate(-25deg); opacity: 0.7; } 50% { transform: translateX(0%) rotate(-25deg); opacity: 1; } 100% { transform: translateX(100%) rotate(-25deg); opacity: 0.7; } }
+        .btn-gold { background: #ffd400; color: #000; font-weight: 700; }
+        .btn-gold:hover { filter: brightness(0.95); box-shadow: 0 6px 18px rgba(255,212,68,0.14); }
+        .card-glow { transition: box-shadow 0.25s ease, transform 0.18s ease; }
+        .card-glow:hover { box-shadow: 0 10px 30px rgba(255,208,96,0.06), 0 2px 8px rgba(0,0,0,0.6); transform: translateY(-4px); }
+        .gold-text { color: #FFD700; }
+        .panel { background: #121212; border: 1px solid rgba(255,215,64,0.06); }
+        .input-dark { background: #141414; color: #fff; border: 1px solid rgba(255,255,255,0.04); }
       `}</style>
 
-      <div className="w-full max-w-3xl panel rounded-2xl p-6">
-        <motion.div variants={formAnim} initial="hidden" animate="visible">
-          <div className="flex justify-between items-center mb-4">
+      <div className="w-full max-w-3xl gold-shimmer rounded-2xl p-6">
+        <motion.div variants={formVariant} initial="hidden" animate="visible">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold gold-text">{t("title")}</h1>
-            <button
-              className="p-2 rounded-full bg-[#1c1c1c]"
-              onClick={() => setLang((l) => (l === "en" ? "te" : "en"))}
-              title={lang === "en" ? "Switch to Telugu" : "Switch to English"}
-            >
-              <Globe size={18} color="#ffd700" />
-            </button>
+
+            {/* Language toggle top-right */}
+            <div className="text-right text-xs text-gray-400 flex items-center gap-3">
+              <div className="text-right">
+                <div>{t("mode")}: <span className="font-medium">{t(mode)}</span></div>
+                <div>{t("interestType")}: <span className="font-medium">{t(interestType)}</span></div>
+              </div>
+
+              <button
+                onClick={() => setLang((s) => (s === "en" ? "te" : "en"))}
+                className="ml-3 p-2 rounded-full bg-[#1a1a1a] hover:bg-[#222] transition"
+                title={lang === "en" ? "Switch to Telugu" : "Switch to English"}
+              >
+                <Globe size={18} color="#FFD700" />
+              </button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label>{t("principal")}</label>
-              <input
-                type="number"
-                className="w-full p-2 rounded input-dark"
-                value={principal}
-                onChange={(e) => setPrincipal(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>{t("rate")}</label>
-              <input
-                type="number"
-                className="w-full p-2 rounded input-dark"
-                value={monthlyRate}
-                onChange={(e) => setMonthlyRate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>{t("start")}</label>
-              <input
-                type="date"
-                className="w-full p-2 rounded input-dark"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label>{t("end")}</label>
-              <input
-                type="date"
-                className="w-full p-2 rounded input-dark"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+          {/* Form */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 panel rounded-2xl p-4">
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-300 mb-1">{t("principal")}</label>
+              <input className="p-3 rounded input-dark" type="number" value={principal} onChange={(e) => setPrincipal(e.target.value)} placeholder="e.g., 70000" />
             </div>
 
-            <div>
-              <label>{t("mode")}</label>
-              <select
-                value={mode}
-                className="w-full p-2 rounded input-dark"
-                onChange={(e) => setMode(e.target.value)}
-              >
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-300 mb-1">{t("rate")}</label>
+              <input className="p-3 rounded input-dark" type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="e.g., 2.1" />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-300 mb-1">{t("start")}</label>
+              <input className="p-3 rounded input-dark" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-sm text-gray-300 mb-1">{t("end")}</label>
+              <input className="p-3 rounded input-dark" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+            </div>
+
+            {/* Mode */}
+            <div className="flex items-center gap-3 mt-2">
+              <label className="text-sm text-gray-300">{t("mode")}</label>
+              <select className="p-2 rounded input-dark" value={mode} onChange={(e) => setMode(e.target.value)}>
                 <option value="monthly">{t("monthly")}</option>
                 <option value="daily">{t("daily")}</option>
               </select>
             </div>
 
+            {/* Paid Status visible only for monthly */}
             {mode === "monthly" && (
-              <div>
-                <label>{t("paidStatus")}</label>
-                <select
-                  value={paidStatus}
-                  className="w-full p-2 rounded input-dark"
-                  onChange={(e) => setPaidStatus(e.target.value)}
-                >
+              <div className="flex items-center gap-3 mt-2">
+                <label className="text-sm text-gray-300">{t("paidStatus")}</label>
+                <select className="p-2 rounded input-dark" value={paidStatus} onChange={(e) => setPaidStatus(e.target.value)}>
                   <option value="not_paid">{t("not_paid")}</option>
                   <option value="paid">{t("paid")}</option>
                 </select>
               </div>
             )}
 
-            <div>
-              <label>{t("interestType")}</label>
-              <select
-                value={interestType}
-                className="w-full p-2 rounded input-dark"
-                onChange={(e) => setInterestType(e.target.value)}
-              >
+            <div className="flex items-center gap-3 mt-2">
+              <label className="text-sm text-gray-300">{t("interestType")}</label>
+              <select className="p-2 rounded input-dark" value={interestType} onChange={(e) => setInterestType(e.target.value)}>
                 <option value="simple">{t("simple")}</option>
                 <option value="compound">{t("compound")}</option>
               </select>
             </div>
 
-            <div className="md:col-span-2 flex justify-end">
-              <motion.button
-                whileTap={{ scale: 0.96 }}
-                className="btn-gold px-6 py-2 rounded mt-2"
-                onClick={calculate}
-              >
+            <div className="md:col-span-2 flex justify-end mt-2">
+              <motion.button whileTap={{ scale: 0.98 }} whileHover={{ scale: 1.02 }} className="btn-gold px-5 py-2 rounded-lg font-semibold" onClick={calculate}>
                 {t("calc")}
               </motion.button>
             </div>
           </div>
         </motion.div>
 
-        {/* Result history */}
+        {/* Results history */}
         <div className="mt-6">
           <AnimatePresence>
-            {results.map((r, i) => (
-              <motion.div
-                key={r.id}
-                variants={cardAnim(i)}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="panel rounded-xl p-4 mb-3"
-              >
+            {results.map((r, idx) => (
+              <motion.div key={r.id} initial="hidden" animate="visible" exit="exit" variants={cardVariant(idx)} className="card-glow panel rounded-xl p-4 mt-4" layout>
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="text-lg gold-text">
-                      ₹{r.principal} @ {r.monthlyRate}%
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {t(r.interestType)} • {t(r.mode)}{" "}
-                      {r.mode === "monthly" ? `• ${t(r.paidStatus)}` : ""}
-                    </div>
+                    <div className="text-lg font-semibold gold-text">₹{r.principal} @ {r.monthlyRate}%</div>
+                    <div className="text-sm text-gray-400">{t(r.interestType)} • {t(r.mode)}{r.mode === "monthly" ? ` • ${t(r.paidStatus)}` : ""}</div>
                   </div>
-                  <button onClick={() => del(r.id)}>
-                    <Trash2 size={18} color="#ff6666" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 text-sm">
-                  <div>
-                    <div className="text-gray-400">{t("start")}</div>
-                    <div>{formatDate(r.startDate)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">{t("end")}</div>
-                    <div>{formatDate(r.endDate)}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400">
-                      {r.mode === "daily" ? t("days_incl") : t("months_incl")}
-                    </div>
-                    <div>
-                      {r.mode === "daily"
-                        ? r.totalDays
-                        : r.monthsCount.toFixed(2)}
-                    </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <button onClick={() => deleteEntry(r.id)} className="text-red-400 hover:text-red-500">
+                      <Trash2 size={18} />
+                    </button>
+                    <div className="text-xs text-gray-400">{new Date(r.id).toLocaleString()}</div>
                   </div>
                 </div>
 
-                <div className="flex justify-between mt-3">
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                  <div className="p-2 rounded bg-[#0f0f0f]">
+                    <div className="text-gray-300 text-xs">{t("start")}</div>
+                    <div className="text-white">{formatDDMMYYYY(r.startDate)}</div>
+                  </div>
+                  <div className="p-2 rounded bg-[#0f0f0f]">
+                    <div className="text-gray-300 text-xs">{t("end")}</div>
+                    <div className="text-white">{formatDDMMYYYY(r.endDate)}</div>
+                  </div>
+                  <div className="p-2 rounded bg-[#0f0f0f]">
+                    <div className="text-gray-300 text-xs">{r.mode === "daily" ? t("days_incl") : t("months_incl")}</div>
+                    <div className="text-white">{r.mode === "daily" ? (r.totalInclusive ?? r.totalDays) : (r.monthsCount ?? r.totalMonths)}</div>
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
                   <div>
-                    <div className="text-gray-400">{t("interest_label")}</div>
-                    <div className="text-green-400">₹{r.interest}</div>
+                    <div className="text-sm text-gray-300">{t("interest_label")}</div>
+                    <div className="text-lg font-semibold text-green-300">₹{r.interest}</div>
                   </div>
                   <div className="text-right">
-                    <div className="text-gray-400">{t("total_label")}</div>
-                    <div className="text-yellow-400 font-semibold">
-                      ₹{r.total}
-                    </div>
+                    <div className="text-sm text-gray-300">{t("total_label")}</div>
+                    <div className="text-lg font-semibold gold-text">₹{r.total}</div>
                   </div>
                 </div>
               </motion.div>
